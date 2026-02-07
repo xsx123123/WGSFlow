@@ -1,0 +1,105 @@
+# RNAFlow Pipeline - Reference Genome Configuration
+#
+# This file defines the paths to reference genome files and other reference databases
+# used by the RNA-seq analysis pipeline. It contains configuration for multiple
+# supported organisms and genome versions.
+#
+# Key Configuration Sections:
+# - reference_path: Root directory containing all reference genome files
+# - fastq_screen_db_path: Root directory for contamination screening databases
+# - can_use_genome_version: List of supported genome versions
+# - STAR_index: Detailed reference file paths for each supported genome version
+#
+# Migration Note: When moving this pipeline to a different server or environment,
+# update the 'reference_path' and 'fastq_screen_db_path' variables to point to the
+# correct locations on the new system.
+
+# Reference Genome Root Directory
+# Base path where all reference genome files are stored
+reference_path : /data/jzhang/reference/RNAFlow_reference
+
+# FastQ Screen Database Root Path
+# Directory containing contamination screening databases for fastq_screen
+# Should contain subdirectories like 'hg38', 'GRCm39', 'fastq_screen_database', etc.
+fastq_screen_db_path: /data/jzhang/reference/fastq_screen_database
+
+# Supported Genome Versions
+# List of genome versions that are officially supported by this pipeline configuration
+can_use_genome_version:
+  - Lsat_Salinas_v11    # Lactuca sativa (Lettuce) Salinas v11
+  - Lsat_Salinas_v8     # Lactuca sativa (Lettuce) Salinas v8
+  - ITAG4.1             # Solanum lycopersicum (Tomato) ITAG4.1
+  - TAIR10.1            # Arabidopsis thaliana TAIR10.1
+  - GRCm39              # Mus musculus (Mouse) GRCm39
+  - hg38                # Homo sapiens (Human) GRCh38/hg38
+  - GO                  # Gene Ontology database
+
+# STAR Index and Reference File Configuration
+# Detailed file paths for each supported genome version
+# Each entry should contain all required reference files for the pipeline modules
+STAR_index:
+    Lsat_Salinas_v11:
+      index: Lactuca_sativa_V11_ncbi/RSEM_Lactuca_sativa_V11_ncbi
+      genome_fa: Lactuca_sativa_V11_ncbi/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.fna
+      genome_gtf: Lactuca_sativa_V11_ncbi/GCF_002870075.4_Lsat_Salinas_v11_genomic.nuclear_only.gtf
+      genome_gff: Lactuca_sativa_V11_ncbi/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.gff
+      rsem_index: Lactuca_sativa_V11_ncbi/RSEM_Lactuca_sativa_V11_ncbi/Lactuca_sativa_V11_ncbi
+      rsem_index_dir: Lactuca_sativa_V11_ncbi/RSEM_Lactuca_sativa_V11_ncbi/
+      bed12: Lactuca_sativa_V11_ncbi/Lsat_Salinas_v11.bed12
+      go_annotation: Lactuca_sativa_V11_ncbi/GCF_002870075.4-RS_2022_12_gene_ontology.go
+      ref_all: Lactuca_sativa_V11_ncbi/Lsat_ref_all.txt
+      ploidy: 2
+    Lsat_Salinas_v8:
+      index: Lactuca_sativa_V8/RSEM_Lactuca_sativa_V8
+      genome_fa: Lactuca_sativa_V8/Lactuca_sativa_V8A.fasta
+      genome_gtf: Lactuca_sativa_V8/Lactuca_sativa_V8A.gtf
+      genome_gff: Lactuca_sativa_V8/Lactuca_sativa_V8A.gff3
+      rsem_index: Lactuca_sativa_V8/RSEM_Lactuca_sativa_V8/Lactuca_sativa_V8
+      rsem_index_dir: Lactuca_sativa_V8/RSEM_Lactuca_sativa_V8/
+      bed12: Lactuca_sativa_V8/Lactuca_sativa_V8A.bed12
+      go_annotation: Lactuca_sativa_V8/Salinas_V8_eggNOG_GO.go
+      ploidy: 2
+    ITAG4.1:
+      index: ITAG4.1/RSEM_ITAG4.1
+      genome_fa: ITAG4.1/S_lycopersicum_chromosomes.4.00.fa
+      genome_gtf: ITAG4.1/ITAG4.1_gene_models.gtf
+      genome_gff: ITAG4.1/ITAG4.1_gene_models.gff
+      rsem_index: ITAG4.1/RSEM_ITAG4.1/RSEM_ITAG4.1
+      rsem_index_dir: ITAG4.1/RSEM_ITAG4.1/
+      bed12: ITAG4.1/ITAG4.1_gene_models.bed12
+      go_annotation: ITAG4.1/ITAG4.1_blast2go_annot.annot_deal
+      ref_all: ITAG4.1/ITAG4.1_ref_all.txt
+      ploidy: 2
+    TAIR10.1:
+      index: TAIR10.1/RSEM_TAIR10.1
+      genome_fa: TAIR10.1/TAIR10_chr_all.fas
+      genome_gtf: TAIR10.1/Araport11_GTF_genes_transposons.20241001.gtf
+      genome_gff: TAIR10.1/Araport11_GFF3_genes_transposons.20250813.gff
+      rsem_index: TAIR10.1/RSEM_TAIR10.1/TAIR10.1_index
+      rsem_index_dir: TAIR10.1/RSEM_TAIR10.1/
+      bed12: TAIR10.1/Araport11_GTF_genes_transposons.20241001.bed12
+      go_annotation: TAIR10.1/gene_go_annotation.go
+      ploidy: 2
+    GRCm39:
+      index: GRCm39/RSEM_GRCm39
+      genome_fa: GRCm39/GRCm39.genome.fa
+      genome_gtf: GRCm39/gencode.vM38.annotation.gtf
+      genome_gff: GRCm39/gencode.vM38.annotation.gff3
+      rsem_index: GRCm39/RSEM_GRCm39/RSEM_GRCm39_index
+      rsem_index_dir: GRCm39/RSEM_GRCm39/
+      bed12: GRCm39/gencode.vM38.annotation.bed12
+      go_annotation: GRCm39/mgigene_go_annotation.tsv
+      ref_all: GRCm39/GRCm39_ref_all.txt
+      ploidy: 2
+    hg38:
+      index: HG38/RSEM_hg38
+      genome_fa: HG38/GRCh38.p14.genome.fa
+      genome_gtf: HG38/gencode.v49.annotation.gtf
+      genome_gff: HG38/gencode.v49.annotation.gff3
+      rsem_index: HG38/RSEM_hg38/hg38_index
+      rsem_index_dir: HG38/RSEM_hg38/
+      bed12: HG38/gencode.v49.annotation.bed12
+      go_annotation: HG38/goa_human.go
+      ploidy: 2
+    GO:
+      obo: go_database/go-basic.obo
