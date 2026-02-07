@@ -33,6 +33,11 @@ parameter:
     RSEM_INDEX: 20          # RSEM index building
     rsem-calculate: 20      # RSEM expression quantification
     bam2cram: 10            # BAM to CRAM compression
+    samtools: 10
+    bwa_mem: 16
+    bam2cram: 10
+    mosdepth: 10
+    sambamba: 10
     bamCoverage: 20         # BigWig coverage track generation
     stringtie: 16           # StringTie transcript assembly
     gatk: 1                 # GATK variant calling (Java-based, memory managed separately)
@@ -40,7 +45,8 @@ parameter:
     rnaflow-cli: 8          # RNAFlow delivery tool
     Report: 10              # Containerized report generation
     compress_bg: 8
-
+  bwa_mem:
+    library_platform: DNB
   # FastQ Screen Configuration
   # Parameters for contamination screening using fastq_screen
   validate_fastq_screen:
