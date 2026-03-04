@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 import os
 from loguru import logger
+from utils.variant_chromosomes import get_chromosomes
 # ----- rule ----- #
+
 rule record_ref_metadata:
     """
     Record reference genome metadata for reproducibility.
@@ -67,8 +69,8 @@ rule sort_index:
     input:
         bam = '02.mapping/bwa_mem/{sample}/{sample}.raw.bam',
     output:
-        sort_bam = '02.mapping/bwa_mem/sort_index/{sample}.sort.bam',
-        sort_bam_bai = '02.mapping/bwa_mem/sort_index/{sample}.sort.bam.bai',
+        sort_bam =  temp('02.mapping/bwa_mem/sort_index/{sample}.sort.bam'),
+        sort_bam_bai = temp('02.mapping/bwa_mem/sort_index/{sample}.sort.bam.bai'),
     conda:
         workflow.source_path("../envs/samtools.yaml"),
     resources:
@@ -86,7 +88,6 @@ rule sort_index:
         (samtools sort -@ {threads} -o {output.sort_bam} {input.bam} &&
         samtools index -@ {threads} {output.sort_bam}) 2>{log}
         """
-
 
 rule bam2cram:
     """
@@ -126,9 +127,12 @@ rule bam2cram:
 
 rule sambamba_MarkDuplicates:
     input:
-        bam = '02.mapping/bwa_mem2/sort_index/{sample}.sort.bam',
+        sort_bam = '02.mapping/bwa_mem/sort_index/{sample}.sort.bam',
+        sort_bam_bai = '02.mapping/bwa_mem/sort_index/{sample}.sort.bam.bai',
     output:
-        duplicates_bam = '02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam',
+        duplicates_bam = temp('02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam'),
+    resources:
+        **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     log:
         "logs/02.mapping/duplicates_{sample}.log",
     message:
@@ -149,9 +153,11 @@ rule sambamba_MarkDuplicates:
 
 rule Duplicates_bam_index:
     input:
-        duplicates_bam = '02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam',
+        duplicates_bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
     output:
-        duplicates_bam_bai = '02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam.bai',
+        duplicates_bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
+    resources:
+        **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
         workflow.source_path("../envs/samtools.yaml"),
     message:
@@ -169,11 +175,13 @@ rule Duplicates_bam_index:
 
 rule bam_coverage:
     input:
-        bam = '02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam',
-        bam_bai = '02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam.bai',
+        bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
+        bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
     output:
         dist = "02.mapping/mosdepth_coverage/{sample}.sort.Dup.global.dist.txt",
         summary = "02.mapping/mosdepth_coverage/{sample}.sort.Dup.mosdepth.summary.txt",
+    resources:
+        **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
         workflow.source_path("../envs/mosdepth.yaml"),
     message:
@@ -198,7 +206,8 @@ rule bam_coverage:
 
 rule qualimap_qc:
     input:
-        bam = '02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam',
+        bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
+        bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
     output:
         qualimap_report_html = '02.mapping/qualimap_report/{sample}/qualimapReport.html',
         qualimap_report_txt = '02.mapping/qualimap_report/{sample}/genome_results.txt',
@@ -230,7 +239,8 @@ rule qualimap_qc:
 
 rule samtools_flagst:
     input:
-        bam = '02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam',
+        bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
+        bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
     output:
         samtools_flagstat = '02.mapping/samtools_flagstat/{sample}_dup_bam_flagstat.tsv',
     conda:
@@ -253,7 +263,8 @@ rule samtools_flagst:
 
 rule samtools_stats:
     input:
-        bam = '../02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam',
+        bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
+        bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
     output:
         samtools_stats = '../02.mapping/samtools_stats/{sample}_dup_bam_stats.tsv',
     conda:
@@ -274,5 +285,50 @@ rule samtools_stats:
                  -@ {threads} \
                  --reference {params.reference} \
                  {input.bam} > {output.samtools_stats} 2>{log}
+        """
+
+rule mapping_report:
+    """
+    Aggregate all mapping QC results into a comprehensive MultiQC report.
+
+    This rule collects QC metrics from all previous mapping-related rules
+    (STAR, Qualimap, Samtools, Preseq) and generates a unified HTML report
+    using MultiQC. The aggregated report provides a single dashboard for
+    assessing the quality of all samples in the RNA-seq experiment, making
+    it easy to identify potential issues or outliers.
+    """
+    input:
+        qualimap_report_html =  expand('02.mapping/qualimap_report/{sample}/qualimapReport.html',sample=samples.keys()),
+        qualimap_report_txt =  expand('02.mapping/qualimap_report/{sample}/genome_results.txt',sample=samples.keys()),
+        samtools_flagstat = expand('02.mapping/samtools_flagstat/{sample}_dup_bam_flagstat.tsv',sample=samples.keys()),
+        samtools_stats = expand('02.mapping/samtools_stats/{sample}_dup_bam_stats.tsv',sample=samples.keys()),
+        dist = expand("02.mapping/mosdepth_coverage/{sample}.sort.Dup.global.dist.txt",sample=samples.keys()),
+        summary = expand("02.mapping/mosdepth_coverage/{sample}.sort.Dup.mosdepth.summary.txt",sample=samples.keys()),
+    output:
+        report = "02.mapping/mapping_report/multiqc_mapping_report.html",
+    resources:
+        **rule_resource(config, 'low_resource',skip_queue_on_local=True,logger = logger),
+    conda:
+        workflow.source_path("../envs/multiqc.yaml"),
+    message:
+        "Running MultiQC to aggregate mapping reports",
+    params:
+        fastqc_reports = "02.mapping/",
+        report_dir = '02.mapping/mapping_report',
+        report = "multiqc_mapping_report.html",
+        title = "mapping_report",
+    log:
+        "logs/02.mapping/multiqc_mapping_report.log",
+    benchmark:
+        "benchmarks/multiqc_mapping_report_benchmark.txt",
+    threads:
+        config['parameter']['threads']['multiqc'],
+    shell:
+        """
+        multiqc {params.fastqc_reports} \
+                --force \
+                --outdir {params.report_dir} \
+                -i {params.title} \
+                -n {params.report} &> {log}
         """
 # ----- rule ----- #

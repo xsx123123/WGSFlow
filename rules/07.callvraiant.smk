@@ -3,46 +3,21 @@
 import os
 from loguru import logger
 # ----- rule ----- #
-#rule call_variant_by_bcftools:
-#    input:
-#        bam = '../02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam',
-#    output:
-#        vcf = '../03.call_variant/{sample}.raw.vcf.gz',
-#    log:
-#        "../logs/03.call_variant/{sample}_variant.log",
-#    benchmark:
-#            "../benchmarks/{sample}_variant_benchmark.txt",
-#    threads: 
-#        config["threads"]["bcftools_call"],
-#    params:
-#        reference = config["bcftools"]['reference'],
-#        path = config["bcftools"]['path'],
-#        ploidy = config["bcftools"]['ploidy'],
-#        verbosity = config["bcftools"]['verbosity'],
-#    message:
-#        " Running bcftools mpileup & bcftools call (Predefined ploidy:{params.ploidy}) on the sorted and duplicate marked BAM : {input.bam}",
-#    shell:
-#        """
-#        {params.path} mpileup \
-#                 --threads {threads} \
-#                 --verbosity {params.verbosity} \
-#                 -f {params.reference} \
-#                 {input.bam} | {params.path} call \
-#                 --threads {threads} \
-#                 --ploidy {params.ploidy} \
-#                 --verbosity {params.verbosity} \
-#                 -mv -Oz -o {output.vcf} &>{log}
-#        """
+
+# get chrome list by get_chromosomes function
+CHROMOSOMES = get_chromosomes(config = config,
+                              reference_fasta = ['bwa_mem',config['Genome_Version'],'genome_fa'])
+
 rule call_variant_by_chromosome:
     input:
-        bam = '../02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam',
-        bai = '../02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam.bai',
+        bam = '02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam',
+        bai = '02.mapping/bwa_mem2/MarkDup/{sample}.sort.Dup.bam.bai',
     output:
-        vcf = temp('../03.call_variant/by_chr/{sample}.{chr}.raw.vcf.gz'),
+        vcf = temp('03.call_variant/by_chr/{sample}.{chr}.raw.vcf.gz'),
     log:
-        "../logs/03.call_variant/{sample}_{chr}_variant.log",
+        "logs/03.call_variant/{sample}_{chr}_variant.log",
     benchmark:
-        "../benchmarks/{sample}_{chr}_variant_benchmark.txt",
+        "benchmarks/{sample}_{chr}_variant_benchmark.txt",
     threads:
         config["threads"]["bcftools_call"],
     params:
@@ -70,11 +45,8 @@ rule call_variant_by_chromosome:
 
 rule concat_sample_chromosomes:
     input:
-        vcf_list = lambda wildcards: expand(
-            '../03.call_variant/by_chr/{sample}.{chr}.raw.vcf.gz',
-            sample=wildcards.sample,
-            chr=CHROMOSOMES
-        ),
+        vcf_list = lambda wildcards: expand('03.call_variant/by_chr/{sample}.{chr}.raw.vcf.gz',
+        sample=wildcards.sample,chr=CHROMOSOMES),
     output:
         vcf = '../03.call_variant/{sample}.raw.vcf.gz',
     log:
