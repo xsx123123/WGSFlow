@@ -14,19 +14,17 @@
 # update the 'reference_path' and 'fastq_screen_db_path' variables to point to the
 # correct locations on the new system.
 
+# ------------------------------------- #
 # Reference Genome Root Directory
+# ------------------------------------- #
 # Base path where all reference genome files are stored
 reference_path : /data/jzhang/reference/WGSFlow_reference
-
-# FastQ Screen Database Root Path
-# Directory containing contamination screening databases for fastq_screen
-# Should contain subdirectories like 'hg38', 'GRCm39', 'fastq_screen_database', etc.
-fastq_screen_db_path: /data/jzhang/reference/fastq_screen_database
 
 # Supported Genome Versions
 # List of genome versions that are officially supported by this pipeline configuration
 can_use_genome_version:
   - Lsat_Salinas_v11    # Lactuca sativa (Lettuce) Salinas v11
+  - hg38_p14            # human genome hg38.p14
   - GO                  # Gene Ontology database
 
 # STAR Index and Reference File Configuration
@@ -41,6 +39,51 @@ bwa_mem:
       bed12: Lactuca_sativa_V11_ncbi/Lsat_Salinas_v11.bed12
       go_annotation: Lactuca_sativa_V11_ncbi/GCF_002870075.4-RS_2022_12_gene_ontology.go
       ref_all: Lactuca_sativa_V11_ncbi/Lsat_ref_all.txt
-      ploidy: 2
+    hg38_p14:
+      index: Homo_sapiens_assembly38/bwa-mem_v11/Lsat_Salinas_v11
+      genome_fa: Homo_sapiens_assembly38/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.fna
+      genome_gtf: Homo_sapiens_assembly38/GCF_002870075.4_Lsat_Salinas_v11_genomic.nuclear_only.gtf
+      genome_gff: Homo_sapiens_assembly38/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.gff
+      bed12: Homo_sapiens_assembly38/Lsat_Salinas_v11.bed12
+      go_annotation: Homo_sapiens_assembly38/GCF_002870075.4-RS_2022_12_gene_ontology.go
+      ref_all: Homo_sapiens_assembly38/Lsat_ref_all.txt
+      omni: Homo_sapiens_assembly38/1000G_omni2.5.hg38.vcf.gz
+      1000G_phase1: Homo_sapiens_assembly38/1000G_phase1.snps.high_confidence.hg38.vcf.gz
+      hapmap: Homo_sapiens_assembly38/hapmap_3.3.hg38.vcf.gz
+      dbsnp138: Homo_sapiens_assembly38/Homo_sapiens_assembly38.dbsnp138.vcf
+      Mills: Homo_sapiens_assembly38/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz
     GO:
       obo: go_database/go-basic.obo
+
+# ------------------------------------- #
+# FastQ Screen Database Root Path
+# ------------------------------------- #
+# Directory containing contamination screening databases for fastq_screen
+# Should contain subdirectories like 'hg38', 'GRCm39', 'fastq_screen_database', etc.
+fastq_screen_db_path: /data/jzhang/reference/fastq_screen_database
+
+# ------------------------------------- #
+# snpEff annotstion database path
+# ------------------------------------- #
+snpEff_db_path: /data/jzhang/reference/snpEff_database
+snpEff_name:
+  Lsat_Salinas_v11: 
+    name: Lactuca_sativa_V11
+  Lsat_Salinas_v8: 
+    name: Lactuca_sativa_V8
+# ------------------------------------- #
+# ploidy setting for bcftools
+# ------------------------------------- #
+ploidy_setting:
+  Lsat_Salinas_v11:
+    ploidy: 2  # genome ploidy
+  Lsat_Salinas_v8:     
+    ploidy: 2
+  ITAG4.1:
+    ploidy: 2
+  TAIR10.1:
+    ploidy: 2
+  GRCm39:
+    ploidy: 2
+  hg38_p14 :
+    ploidy: 2

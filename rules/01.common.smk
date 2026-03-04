@@ -25,7 +25,7 @@ import time
 from pathlib import Path
 from typing import Dict, Union, List, Callable
 from rich import print as rich_print
-from utils.datadeliver import qc_clean,mapping,count,Deg,call_variant,noval_Transcripts,rmats
+from utils.datadeliver import qc_clean,mapping,call_variant
 
 # Import logger for consistent logging
 from snakemake_logger_plugin_rich_loguru import get_analysis_logger
@@ -58,7 +58,7 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
     # ---------------------------------------------------------
     
     # [A] 基础模块：无论如何必须运行，不需要用户在 yaml 配置
-    basic_modules = ['qc_clean', 'mapping', 'count']
+    basic_modules = ['qc_clean', 'mapping', 'call_variant']
 
     # [B] 深度质控标记：属于 Mapping 内部的参数，默认开启，only_qc=True 时也保留
     # 注意：这些 key 必须与 mapping 函数内部检查的 key 一致
@@ -132,13 +132,10 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
             time.sleep(1)
             _qc_warning_logged = True
             
-        # 强制关闭下游模块
         for module in downstream_modules:
             config[module] = False
             
     else:
-        # === 模式: 全流程分析 ===
-        # 激活下游模块 (除非用户显式设为 False)
         for module in downstream_modules:
             if config.get(module) is not False:
                 config[module] = True
@@ -147,12 +144,10 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
     # 4. 执行并收集输出文件
     # ---------------------------------------------------------
     for module, func in module_functions.items():
-        # 只有在 config 中为 True 时才运行
         if config.get(module):
             if module == "rmats":
                 data_deliver = func(samples, data_deliver, all_contrasts)
             elif module == "mapping":
-                # 这里传递的 config 已经包含了 rseqc=True, bamCoverage=True
                 data_deliver = func(samples, data_deliver)
             else:
                 data_deliver = func(samples, data_deliver)

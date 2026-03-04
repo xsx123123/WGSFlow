@@ -24,29 +24,25 @@ parameter:
     fastp: 8                # Fastp adapter trimming and quality filtering
     multiqc: 1              # MultiQC report generation (single-threaded)
     fastq_screen: 10        # Fastq_screen contamination screening
-    STAR_INDEX: 40          # STAR index building (very resource intensive)
-    STAR_MAPPING: 16        # STAR alignment (memory and CPU intensive)
-    samtools: 10            # Samtools operations (sorting, indexing, etc.)
-    samtools_flagstat: 10   # Samtools flagstat statistics
-    samtools_stats: 10      # Samtools comprehensive statistics
-    qualimap: 10            # Qualimap BAM quality control
-    RSEM_INDEX: 20          # RSEM index building
-    rsem-calculate: 20      # RSEM expression quantification
-    bam2cram: 10            # BAM to CRAM compression
-    samtools: 10
     bwa_mem: 16
-    bam2cram: 10
-    mosdepth: 10
-    sambamba: 10
-    bamCoverage: 20         # BigWig coverage track generation
-    stringtie: 16           # StringTie transcript assembly
-    gatk: 1                 # GATK variant calling (Java-based, memory managed separately)
-    rmats: 6                # rMATS alternative splicing analysis
-    rnaflow-cli: 8          # RNAFlow delivery tool
+    samtools: 8
+    bam2cram: 8
+    sambamba: 8
+    mosdepth: 8
+    qualimap: 8
+    samtools_flagstat: 8
+    samtools_stats: 8
+    bcftools: 10
+    gatk_vqsr: 10
+    manta: 16
     Report: 10              # Containerized report generation
     compress_bg: 8
+  # BAM Alignment Parameters
   bwa_mem:
     library_platform: DNB
+  # vcf bcftools Parameters
+  bcftools:
+    verbosity: 2
   # FastQ Screen Configuration
   # Parameters for contamination screening using fastq_screen
   validate_fastq_screen:
@@ -58,24 +54,6 @@ parameter:
     conf: ../src/src/fastq_screen/fastq_screen.conf          # Configuration file
     subset: 100000          # Number of reads to sample for screening (performance optimization)
     aligner: Bowtie2        # Alignment tool to use (Bowtie2 or BWA)
-
-  # RSEM Expression Matrix Configuration
-  # Parameters for merging individual RSEM results into expression matrices
-  merge_rsem:
-    path: ../src/src/gene_matrix/merge_rsem.py               # Merge script path
-    extension: .genes.results                                # File extension for RSEM output
-
-  # StringTie Assembly Parameters
-  # Quality filtering thresholds for transcript assembly
-  stringtie:
-    min_length: 200         # Minimum transcript length in bp (plant lncRNA typically >200bp)
-    min_cov: 5              # Minimum read coverage required for transcript inclusion
-    min_fpkm: 1.0           # Minimum FPKM threshold to filter low-expression noise
-
-  # STAR Aligner Configuration
-  # Platform-specific settings for STAR alignment
-  STAR:
-    PL: ILUMINA             # Sequencing platform (ILUMINA, IONTORRENT, etc.)
 
   # Qualimap Quality Control Settings
   # Parameters for BAM quality assessment using Qualimap
@@ -91,6 +69,11 @@ parameter:
     normalizeUsing: RPKM    # Normalization method (RPKM, CPM, BPM, RPGC)
 
   # GATK Variant Calling Filters
+  gatk_memory:
+    VariantRecalibrator_SNP: -Xmx32G
+    ApplyVQSR_SNP: -Xmx10G
+    VariantRecalibrator_INDEL: -Xmx24G
+    ApplyVQSR_INDEL: -Xmx32G
   # RNA-seq specific filtering thresholds for variant calling
   gatk:
     filter:
@@ -99,48 +82,6 @@ parameter:
         cluster_size: 3       # Minimum number of variants in cluster to trigger filtering
         fs_threshold: 30.0    # Fisher Strand bias threshold (RNA-seq: 30, DNA-seq: 60)
         qd_threshold: 2.0     # Quality by Depth threshold for variant filtering
-
-  # Differential Expression Analysis Settings
-  # Parameters for DESeq2 differential expression analysis
-  DEG:
-    PATH: ../src/src/DEG/run_deseq2.r    # DESeq2 R script path
-    LFC: 1                  # Log2 Fold Change threshold for significance
-    PVAL: 0.05              # Adjusted p-value threshold for significance
-
-  # Functional Enrichment Analysis Configuration
-  # Settings for Gene Ontology and pathway enrichment analysis
-  Enrichments:
-    PATH: ../src/src/Enrichments/go_enricher.r              # GO enrichment R script
-    PATH_py: ../src/src/Enrichments/deg_enrich_wrapper.py   # Python wrapper script
-    gene_col: 'Entrez ID'   # Column name containing gene identifiers in DEG results
-    gene_regex: gene:/      # Regular expression pattern for extracting gene IDs
-
-  # RSEM Quality Control Parameters
-  # Settings for RSEM result validation and quality assessment
-  qc_rsem_ultimate:
-    path: ../src/src/gene_matrix/qc_rsem_ultimate.py        # QC script path
-
-  # Expression Distribution Visualization
-  # Parameters for gene expression distribution plots
-  Distribution:
-    path:  ../src/src/DEG/run_dist.r                        # Distribution plotting script
-    width: 10               # Plot width in inches
-    height: 11              # Plot height in inches
-
-  # Heatmap Visualization Settings
-  # Parameters for expression heatmap generation
-  Heatmap:
-    path:  ../src/src/DEG/run_pheatmap.r                    # Heatmap plotting script
-
-  # rMATS Alternative Splicing Configuration
-  # Parameters for alternative splicing analysis using rMATS
-  rmats:
-    readLength: 125         # Expected read length for splicing analysis
-
-  # rMATS Result Aggregation
-  # Script for merging and summarizing rMATS results across samples/contrasts
-  rmats_summary:
-    path: ../src/src/rMATS/merge_rmats_summary.py           # Summary script path
 
   # Read Trimming and Quality Filtering
   # Parameters for adapter trimming and quality filtering with Fastp

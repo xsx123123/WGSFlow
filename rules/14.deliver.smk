@@ -1,5 +1,6 @@
-#!/usr/bin/snakemake
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
 """
 RNAFlow Pipeline - Data Delivery and Final Report Generation Module
 

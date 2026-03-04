@@ -1,18 +1,42 @@
-#!/usr/bin/snakemake
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+WGSFlow Pipeline - Short Read Mapping and Alignment Module
+
+This module handles the core alignment workflow, transforming cleaned FASTQ reads 
+into coordinate-sorted, deduplicated BAM/CRAM files. It employs industry-standard 
+tools for alignment and comprehensive quality assessment.
+
+Key Components:
+- bwa_mapping: Primary alignment using the BWA-MEM algorithm
+- sort_index: Coordinate sorting and indexing for random access
+- sambamba_MarkDuplicates: Identification and marking of PCR/optical duplicates
+- bam2cram: Reference-based compression for efficient storage
+- mosdepth/qualimap/samtools: Multi-dimensional alignment quality control
+- mapping_report: Aggregated QC visualization using MultiQC
+
+The alignment process is the foundation of the WGS/WES pipeline, determining 
+the genomic origin of each read. Proper handling of duplicates and rigorous 
+QC at this stage are critical for the accuracy of downstream variant calling.
+"""
+
 import os
 from loguru import logger
 from utils.variant_chromosomes import get_chromosomes
+
 # ----- rule ----- #
 
 rule record_ref_metadata:
     """
     Record reference genome metadata for reproducibility.
 
-    This rule creates a text file containing essential reference genome
-    information including the genome version, FASTA file path, and sequence
-    dictionary information. This metadata is crucial for ensuring reproducibility
-    and proper interpretation of results across different analysis runs.
+    This rule captures the exact genomic context used for alignment by 
+    documenting the version, file paths, and sequence dictionary.
+
+    Key Features:
+    - Extracts @SQ lines (sequence names and lengths) from the FASTA file
+    - Stores metadata in a centralized text file
+    - Ensures traceability of reference versions across analysis runs
     """
     input:
         ref = config['bwa_mem'][config['Genome_Version']]['genome_fa'],
@@ -32,27 +56,43 @@ rule record_ref_metadata:
         """
         echo "Genome_Version: {config[Genome_Version]}" > {output.ref_info}
         echo "Fasta_Path: {input.ref}" >> {output.ref_info}
-        samtools dict  {input.ref} | grep '^@SQ' >> {output.ref_info}
+        samtools dict {input.ref} | grep '^@SQ' >> {output.ref_info}
         """
 
 rule bwa_mapping:
+    """
+    Perform primary sequence alignment using BWA-MEM.
+
+    Maps trimmed reads to the reference genome using a Burrows-Wheeler Transform 
+    based algorithm. It is optimized for high-quality queries and long reads.
+
+    Key Processing Steps:
+    - Addition of Read Group (RG) information (ID, SM, PL, LB)
+    - Automatic mapping of paired-end reads
+    - Conversion of SAM output to compressed BAM format on-the-fly
+    
+    Parameters:
+    - index: Path to BWA index files
+    - pl: Sequencing platform (e.g., ILLUMINA)
+    - threads: Parallel processing limit for BWA and Samtools view
+    """
     input:
         r1_trimmed = "01.qc/short_read_trim/{sample}.R1.trimed.fq.gz",
         r2_trimmed = "01.qc/short_read_trim/{sample}.R2.trimed.fq.gz",
     output:
-        bam = temp('../02.mapping/bwa_mem/{sample}/{sample}.raw.bam'),
-    conda:
-        workflow.source_path("../envs/bwa.yaml"),
+        bam = temp('02.mapping/bwa_mem/{sample}/{sample}.raw.bam'),
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
+    conda:
+        workflow.source_path("../envs/bwa.yaml"),
     log:
-        "../logs/02.mapping/bwa_mem_{sample}.log",
+        "logs/02.mapping/bwa_mem_{sample}.log",
     message:
         "Running bwa-mem mapping on {wildcards.sample} R1 and R2",
     benchmark:
-            "../benchmarks/{sample}_bwa_mem_benchmark.txt",
+        "benchmarks/{sample}_bwa_mem_benchmark.txt",
     params:
-        index = config['bwa_mem'][config['Genome_Version']][' index'],
+        index = config['bwa_mem'][config['Genome_Version']]['index'],
         pl = config['parameter']["bwa_mem"]["library_platform"],
     threads: 
         config['parameter']["threads"]["bwa_mem"],
@@ -66,21 +106,32 @@ rule bwa_mapping:
         """
 
 rule sort_index:
+    """
+    Sort BAM files by genomic coordinates and generate indices.
+
+    Rearranges reads in the BAM file to follow the order of the reference 
+    chromosomes and positions.
+
+    Importance:
+    - Required for almost all downstream tools (MarkDuplicates, GATK, IGV)
+    - Enables efficient random access via the companion .bai index file
+    - Reduces the memory footprint of multi-sample analysis
+    """
     input:
         bam = '02.mapping/bwa_mem/{sample}/{sample}.raw.bam',
     output:
         sort_bam =  temp('02.mapping/bwa_mem/sort_index/{sample}.sort.bam'),
         sort_bam_bai = temp('02.mapping/bwa_mem/sort_index/{sample}.sort.bam.bai'),
-    conda:
-        workflow.source_path("../envs/samtools.yaml"),
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
-    message:
-        "Running samtools sort & index for {wildcards.sample}",
+    conda:
+        workflow.source_path("../envs/samtools.yaml"),
     log:
         "logs/02.mapping/bwa_sort_index_{sample}.log",
+    message:
+        "Running samtools sort & index for {wildcards.sample}",
     benchmark:
-            "benchmarks/{sample}_bam_sort_index_benchmark.txt",
+        "benchmarks/{sample}_bam_sort_index_benchmark.txt",
     threads: 
         config['parameter']["threads"]["samtools"],
     shell:
@@ -91,13 +142,15 @@ rule sort_index:
 
 rule bam2cram:
     """
-    Convert BAM files to CRAM format for storage efficiency.
+    Convert BAM files to CRAM format for archival and storage efficiency.
 
-    This rule compresses the sorted BAM files into CRAM format, which typically
-    achieves 40-60% smaller file sizes compared to BAM while maintaining full
-    compatibility with most bioinformatics tools. The CRAM format uses reference-
-    based compression, making it ideal for large-scale RNA-seq projects where
-    storage costs are a concern.
+    CRAM is a highly compressed format that stores only the differences 
+    between the reads and the reference genome.
+
+    Key Benefits:
+    - Achieves 40-70% storage savings compared to BAM
+    - Full compatibility with modern bioinformatics toolchains
+    - Lossless preservation of all read data and quality scores
     """
     input:
         sort_bam = '02.mapping/bwa_mem/sort_index/{sample}.sort.bam',
@@ -110,22 +163,33 @@ rule bam2cram:
     conda:
         workflow.source_path("../envs/bwa2.yaml"),
     message:
-        "Running bam compress of BAM : {input.bam}",
+        "Running conversion to CRAM for: {input.sort_bam}",
     log:
-        "logs/02.mapping/bam_dup_stats_{sample}.log",
+        "logs/02.mapping/bam2cram_{sample}.log",
     benchmark:
-        "benchmarks/{sample}_Dup_bam_stats_benchmark.txt",
-    threads:
-        config['parameter']['threads']['bam2cram'],
+        "benchmarks/{sample}_bam2cram_benchmark.txt",
     params:
         reference = config['bwa_mem'][config['Genome_Version']]['genome_fa'],
+    threads:
+        config['parameter']['threads']['bam2cram'],
     shell:
         """
-        samtools view -@ {threads} -C -T {params.reference} -o {output.cram} {input.bam}
-        samtools index  -@ {threads} {output.cram}
+        samtools view -@ {threads} -C -T {params.reference} -o {output.cram} {input.sort_bam}
+        samtools index -@ {threads} {output.cram}
         """
 
 rule sambamba_MarkDuplicates:
+    """
+    Identify and mark PCR or optical duplicate reads.
+
+    Duplicate reads can lead to false confidence in variant calls. This rule 
+    uses Sambamba, a high-performance alternative to Picard MarkDuplicates.
+
+    Impact on Data:
+    - Flags reads with identical 5' positions (considering orientation)
+    - Allows downstream variant callers to ignore biased evidence
+    - Provides statistics on the duplication rate of the library
+    """
     input:
         sort_bam = '02.mapping/bwa_mem/sort_index/{sample}.sort.bam',
         sort_bam_bai = '02.mapping/bwa_mem/sort_index/{sample}.sort.bam.bai',
@@ -133,25 +197,31 @@ rule sambamba_MarkDuplicates:
         duplicates_bam = temp('02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam'),
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
+    conda:
+        workflow.source_path("../envs/sambamba.yaml"),
     log:
         "logs/02.mapping/duplicates_{sample}.log",
     message:
-        "Running BAM MarkDuplicates for {input.bam}",
+        "Running BAM MarkDuplicates for {input.sort_bam}",
     benchmark:
         "benchmarks/{sample}_bam_MarkDuplicates_benchmark.txt",
-    conda:
-        workflow.source_path("../envs/sambamba.yaml"),
     threads: 
         config['parameter']['threads']['sambamba'],
     shell:
         """
         sambamba markdup --nthreads {threads} \
                           --show-progress \
-                          {input.bam} \
+                          {input.sort_bam} \
                           {output.duplicates_bam} 2>{log}
         """
 
 rule Duplicates_bam_index:
+    """
+    Generate indices for deduplicated BAM files.
+
+    Ensures that the BAM file containing duplicate flags is ready for 
+    high-speed regional queries.
+    """
     input:
         duplicates_bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
     output:
@@ -161,7 +231,7 @@ rule Duplicates_bam_index:
     conda:
         workflow.source_path("../envs/samtools.yaml"),
     message:
-        "Running build index for MarkDuplicates of BAM {input.bam}",
+        "Running build index for deduplicated BAM: {input.duplicates_bam}",
     log:
         "logs/02.mapping/Duplicates_bam_index_{sample}.log",
     benchmark:
@@ -170,10 +240,21 @@ rule Duplicates_bam_index:
         config['parameter']['threads']['samtools'],
     shell:
         """
-        samtools index -@ {threads} {input.bam} 2>{log}
+        samtools index -@ {threads} {input.duplicates_bam} 2>{log}
         """
 
 rule bam_coverage:
+    """
+    Calculate genomic coverage and depth statistics using Mosdepth.
+
+    Mosdepth is a lightning-fast tool for determining how many reads cover 
+    each base in the genome.
+
+    Metrics Generated:
+    - Global distribution of coverage (how much of the genome is at X depth)
+    - Summary of average depth per chromosome/contig
+    - Quantized coverage tracks for visualization
+    """
     input:
         bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
         bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
@@ -185,7 +266,7 @@ rule bam_coverage:
     conda:
         workflow.source_path("../envs/mosdepth.yaml"),
     message:
-        "Running Coverage for MarkDuplicates of BAM : {input.bam}",
+        "Running Coverage analysis for: {input.bam}",
     log:
         "logs/02.mapping/bam_coverage_{sample}.log",
     benchmark:
@@ -205,24 +286,38 @@ rule bam_coverage:
         """
 
 rule qualimap_qc:
+    """
+    Comprehensive alignment quality assessment using Qualimap.
+
+    Provides a macroscopic view of the alignment quality, helping to detect 
+    systemic issues like GC bias or library complexity problems.
+
+    Report Highlights:
+    - Mapping quality distribution
+    - Insert size histogram (crucial for paired-end library validation)
+    - Coverage profile across the genome
+    - Per-chromosome statistics
+    """
     input:
         bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
         bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
     output:
         qualimap_report_html = '02.mapping/qualimap_report/{sample}/qualimapReport.html',
         qualimap_report_txt = '02.mapping/qualimap_report/{sample}/genome_results.txt',
+    resources:
+        **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
         workflow.source_path("../envs/qualimap.yaml"),
     message:
-        "Running qualimap qc for MarkDuplicates of BAM : {input.bam}",
+        "Running qualimap QC for: {input.bam}",
     log:
         "logs/02.mapping/qualimap_report_{sample}.log",
     benchmark:
         "benchmarks/{sample}_Dup_bam_qualimap_benchmark.txt",
     params:
-        genome_gff = config['bwa_mem'][config['Genome_Version']]['genome_gff'],
         outformat = config['parameter']['qualimap']["format"],
         mem = config['parameter']['qualimap']["mem"],
+        genome_gff = config['bwa_mem'][config['Genome_Version']]['genome_gff'],
         prefix_dir = '02.mapping/qualimap_report/{sample}/',
     threads: 
         config['parameter']["threads"]["qualimap"],
@@ -234,23 +329,35 @@ rule qualimap_qc:
                  -gff {params.genome_gff} \
                  -outdir {params.prefix_dir} \
                  -outformat {params.outformat} \
-                 --java-mem-size=16G &>{log}
+                 --java-mem-size={params.mem} &>{log}
         """
 
 rule samtools_flagst:
+    """
+    Generate alignment status summaries using Samtools flagstat.
+
+    Provides a high-level summary of the BAM file based on bitwise flags.
+
+    Key Statistics:
+    - Total reads and percentage mapped
+    - Properly paired reads (indicates library health)
+    - Secondary and supplementary alignment counts
+    """
     input:
         bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
         bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
     output:
         samtools_flagstat = '02.mapping/samtools_flagstat/{sample}_dup_bam_flagstat.tsv',
+    resources:
+        **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
         workflow.source_path("../envs/samtools.yaml"),
     message:
-        "Running flagst for MarkDuplicates of BAM : {input.bam}",
+        "Running flagstat for: {input.bam}",
     log:
-        "logs/02.mapping/bam_dup_lagstat_{sample}.log",
+        "logs/02.mapping/bam_dup_flagstat_{sample}.log",
     benchmark:
-        "benchmarks/{sample}_Dup_bam_lagstat_benchmark.txt",
+        "benchmarks/{sample}_Dup_bam_flagstat_benchmark.txt",
     threads: 
         config['parameter']["threads"]["samtools_flagstat"],
     shell:
@@ -262,15 +369,28 @@ rule samtools_flagst:
         """
 
 rule samtools_stats:
+    """
+    Detailed alignment metric collection using Samtools stats.
+
+    Produces a comprehensive set of statistics that go far beyond flagstat, 
+    including cycle-wise quality and GC content.
+
+    Detailed Analytics:
+    - Base quality distribution across cycles
+    - Fragment length distribution for paired reads
+    - Mismatches per cycle (identifies potential sequencing drift)
+    """
     input:
         bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
         bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
     output:
-        samtools_stats = '../02.mapping/samtools_stats/{sample}_dup_bam_stats.tsv',
+        samtools_stats = '02.mapping/samtools_stats/{sample}_dup_bam_stats.tsv',
+    resources:
+        **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
         workflow.source_path("../envs/samtools.yaml"),
     message:
-        "Running stats for MarkDuplicates of BAM : {input.bam}",
+        "Running stats for: {input.bam}",
     log:
         "logs/02.mapping/bam_dup_stats_{sample}.log",
     benchmark:
@@ -289,13 +409,16 @@ rule samtools_stats:
 
 rule mapping_report:
     """
-    Aggregate all mapping QC results into a comprehensive MultiQC report.
+    Aggregate all alignment QC reports across all samples using MultiQC.
 
-    This rule collects QC metrics from all previous mapping-related rules
-    (STAR, Qualimap, Samtools, Preseq) and generates a unified HTML report
-    using MultiQC. The aggregated report provides a single dashboard for
-    assessing the quality of all samples in the RNA-seq experiment, making
-    it easy to identify potential issues or outliers.
+    This rule collects results from Qualimap, Flagstat, Samtools stats, and 
+    Mosdepth to create a single, interactive dashboard for project-wide QC.
+
+    The MultiQC Report enables:
+    - Comparison of mapping rates across the entire cohort
+    - Detection of outliers with unusual insert sizes or coverage
+    - Batch effect identification via visualization of depth and GC bias
+    - Validation of the alignment stage before proceeding to variant calling
     """
     input:
         qualimap_report_html =  expand('02.mapping/qualimap_report/{sample}/qualimapReport.html',sample=samples.keys()),
@@ -331,4 +454,4 @@ rule mapping_report:
                 -i {params.title} \
                 -n {params.report} &> {log}
         """
-# ----- rule ----- #
+# ----- END ----- #
