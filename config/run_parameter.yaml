@@ -37,6 +37,7 @@ parameter:
     gatk_hc: 8
     gatk_genomicsdb: 8
     gatk_genotype: 8
+    mutect2: 8
     manta: 16
     Report: 10              # Containerized report generation
     compress_bg: 8

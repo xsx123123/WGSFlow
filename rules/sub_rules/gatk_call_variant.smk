@@ -10,8 +10,8 @@ rule gatk_haplotypecaller_gvcf_single:
         bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
         bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
     output:
-        gvcf = '03.call_variant/single_calling/{sample}.g.vcf.gz',
-        tbi = '03.call_variant/single_calling/{sample}.g.vcf.gz.tbi',
+        gvcf = temp('03.call_variant/single_calling/{sample}.g.vcf.gz'),
+        tbi = temp('03.call_variant/single_calling/{sample}.g.vcf.gz.tbi'),
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
@@ -119,6 +119,125 @@ rule gatk_single_hard_filtering:
             --filter-name "HardFilteredSNP" \
             --filter-expression "{params.indel_filter}" \
             --filter-name "HardFilteredINDEL" &> {log}
+        """
+
+rule gatk_SnpEff_annotation:
+    """
+    Annotate variants and predict functional impacts using SnpEff.
+
+    This rule assigns biological meaning to the identified variants by 
+    comparing them against a gene annotation database.
+
+    Outputs:
+    - VCF: Variants with added ANN fields (Effect, Impact, Gene Name, etc.)
+    - CSV/HTML Reports: Summary statistics of variant types and predicted impacts
+    - Upstream/Downstream (ud) 500bp: Considers flanking regions for annotation
+    """
+    input:
+        vcf = '04.filter_variant/single_sample/{sample}_filtered.vcf.gz',
+        tbi = '04.filter_variant/single_sample/{sample}_filtered.vcf.gz.tbi',
+    output:
+        annotated_csv = '04.filter_variant/single_sample/{sample}_filtered.sort.annotation.csv',
+        annotated_html = '04.filter_variant/single_sample/{sample}_filtered.sort.annotation.html',
+        annotated_vcf = '04.filter_variant/single_sample/{sample}_filtered.sort.annotation.vcf',
+    resources:
+        **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
+    conda:
+        workflow.source_path("../envs/snpEff.yaml"),
+    message:
+        "Running call variant annotation by snpEff",
+    log:
+        "logs/03.call_variant/merge_variant_filter_annotation.log",
+    benchmark:
+        "benchmarks/merge_variant_filter_annotation_benchmark.txt",
+    threads:    
+        config['parameter']["threads"]["snpEff"],
+    params:
+        config = os.path.join(config['snpEff_db_path'],'snpEff.config'),
+        genome_name = config['snpEff_name'][config['Genome_Version']]['name'],
+    shell:
+        """
+        snpEff  -csvStats {output.annotated_csv} \
+                -s {output.annotated_html}  \
+                -c {params.config} -v \
+                -ud 500 {params.genome_name} \
+                {input.vcf} > {output.annotated_vcf} 2>{log}
+        """
+
+rule gatk_variant_stats:
+    """
+    Generate quantitative statistics for VCF files using bcftools stats.
+
+    Produces a detailed summary of the VCF content, including transition/transversion 
+    ratios (Ti/Tv), allele frequency distributions, and per-sample counts.
+    """
+    input:
+        vcf = '04.filter_variant/single_sample/{sample}_filtered.vcf.gz',
+        tbi = '04.filter_variant/single_sample/{sample}_filtered.vcf.gz.tbi',
+    output:
+        stats = '04.filter_variant/single_sample/{sample}_filtered.vcf.stats.txt',
+    resources:
+        **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
+    conda:
+        workflow.source_path("../envs/bcftools.yaml"),
+    message:
+        "Running bcftools stats for {input.vcf} file ",
+    log:
+        "logs/03.call_variant/cohort_filtered_stats.log",
+    benchmark:
+        "benchmarks/cohort_filtered_variant_stats_benchmark.txt",
+    params:
+        reference = config['bwa_mem'][config['Genome_Version']]['genome_fa'],
+    threads: 
+        config['parameter']["threads"]["bcftools"],
+    shell:
+        """
+        bcftools stats --threads {threads} \
+                            -f {params.reference} \
+                            {input.vcf}  > {output.stats} 2>{log}
+        """
+
+rule gatk_variant_stats_multiqc:
+    """
+    Aggregate variant statistics across all samples using MultiQC.
+
+    This rule collects the output from bcftools stats and generates an 
+    aggregated report, enabling cross-sample comparisons of variant quality 
+    and distribution.
+
+    Key Visualizations:
+    - Number of SNPs/Indels per sample
+    - Ti/Tv ratios for quality monitoring
+    - Missing data distribution
+    """
+    input:
+        stats = expand('04.filter_variant/single_sample/{sample}_filtered.vcf.stats.txt',sample=samples.keys()),
+    output:
+        report = '04.filter_variant/single_sample/multiqc_callvariant_report.html',
+    resources:
+        **rule_resource(config,'low_resource',skip_queue_on_local=True,logger = logger),
+    conda:
+        workflow.source_path("../envs/multiqc.yaml"),
+    message:
+        "Running MultiQC to aggregate callvariant reports",
+    benchmark:
+        "benchmarks/multiqc_callvariant_benchmark.txt",
+    params:
+        fastqc_reports = "04.filter_variant/single_sample",
+        report_dir = "04.filter_variant/single_sample",
+        report = "multiqc_callvariant_report.html",
+        title = "multiqc_callvariant_report",
+    log:
+        "logs/03.call_variant/multiqc_call_varinat.log",
+    threads:
+        config['parameter']['threads']['multiqc'],
+    shell:
+        """
+        multiqc {params.fastqc_reports} \
+                --force \
+                --outdir {params.report_dir} \
+                -i {params.title} \
+                -n {params.report} &> {log}
         """
 # ----- rule ----- #
 

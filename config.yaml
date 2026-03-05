@@ -56,4 +56,5 @@ germline_call_variant_type:
   - bcftools_single_call_variant
 
 # whether call SV (power by manta)
-call_SV: true 
+call_SV: true
+whether_paired_group: false

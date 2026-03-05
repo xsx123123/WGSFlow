@@ -43,22 +43,22 @@ rule call_SV:
         bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
         bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
     output:
-        run_scripts = '03.call_variant/manta_SV/{sample}/runWorkflow.py',
-        sv_vcf = "03.call_variant/manta_SV/{sample}/results/variants/diploidSV.vcf.gz",
-        sv_vcf_index = "03.call_variant/manta_SV/{sample}/results/variants/diploidSV.vcf.gz.tbi",
+        run_scripts = '05.SV/manta_SV/{sample}/runWorkflow.py',
+        sv_vcf = "05.SV/manta_SV/{sample}/results/variants/diploidSV.vcf.gz",
+        sv_vcf_index = "05.SV/manta_SV/{sample}/results/variants/diploidSV.vcf.gz.tbi",
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
         workflow.source_path("../envs/manta.yaml"),
     log:
-        "logs/03.call_variant/{sample}_manta.log",
+        "logs/05.SV/{sample}_manta.log",
     benchmark:
         "benchmarks/{sample}_manta_benchmark.txt",
     message:
         "Running Manta SV detection for {wildcards.sample}",
     params:
         reference = config['bwa_mem'][config['Genome_Version']]['genome_fa'],
-        Workspaces = '03.call_variant/manta_SV/{sample}',
+        Workspaces = '05.SV/manta_SV/{sample}',
     threads:
         config['parameter']["threads"]["manta"],
     shell:

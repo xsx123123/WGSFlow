@@ -25,7 +25,50 @@ import time
 from pathlib import Path
 from typing import Dict, Union, List, Callable
 from rich import print as rich_print
-from datadeliver import qc_clean,mapping,call_variant
+
+from datadeliver import ( 
+    qc_clean,
+    mapping,
+    bcftools_call_variant,
+    gatk_call_variant,
+    gatk_joint_call_variant,
+    manta_sv_variant,
+    somatic_variant_paired,
+    somatic_variant_single
+)
+
+# Import logger for consistent logging
+from snakemake_logger_plugin_rich_loguru import get_analysis_logger
+logger = get_analysis_logger()
+
+# Flag to track if the QC warning has already been displayed
+_qc_warning_logged = False
+
+"""
+WGSFlow Pipeline - Common Utility Functions Module
+
+This module provides essential utility functions that are used across multiple
+rules in the Whole Genome Sequencing (WGS) analysis pipeline.
+"""
+
+import os
+import glob
+import sys
+import time
+from pathlib import Path
+from typing import Dict, Union, List, Callable
+from rich import print as rich_print
+
+from datadeliver import ( 
+    qc_clean,
+    mapping,
+    bcftools_call_variant,
+    gatk_call_variant,
+    gatk_joint_call_variant,
+    manta_sv_variant,
+    somatic_variant_paired,
+    somatic_variant_single
+)
 
 # Import logger for consistent logging
 from snakemake_logger_plugin_rich_loguru import get_analysis_logger
@@ -57,15 +100,11 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
     # 1. 定义模块类别
     # ---------------------------------------------------------
     
-    # [A] 基础模块：无论如何必须运行，不需要用户在 yaml 配置
-    basic_modules = ['qc_clean', 'mapping', 'call_variant']
+    # [A] 基础模块：QC 和 Mapping 是所有 WGS 流程的核心
+    basic_modules = ['qc_clean', 'mapping']
 
-    # [B] 深度质控标记：属于 Mapping 内部的参数，默认开启，only_qc=True 时也保留
-    # 注意：这些 key 必须与 mapping 函数内部检查的 key 一致
-    deep_qc_flags = ['rseqc', 'bamCoverage', 'tin'] 
-
-    # [C] 下游分析模块：只有当 only_qc=False 时才尝试运行
-    downstream_modules = ['DEG', 'call_variant', 'noval_Transcripts', 'rmats']
+    # [B] 下游分析模块：由配置动态加载
+    downstream_modules = []
 
     # ---------------------------------------------------------
     # 2. 定义执行包装器 (Wrappers)
@@ -74,59 +113,76 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
         return qc_clean(samples, data_deliver)
 
     def execute_mapping(samples, data_deliver):
-        # 必须传入 config，因为 mapping 内部需要读取 rseqc/bamCoverage 等标记
         return mapping(samples, data_deliver, config)
 
-    def execute_count(samples, data_deliver):
-        return count(samples, data_deliver)
+    # germline variant analysis (Synchronized with 07.callvraiant.smk)
+    def execute_bcftools_single(samples, data_deliver):
+        return bcftools_call_variant(samples, data_deliver)
 
-    def execute_deg(samples, data_deliver):
-        return Deg(samples, data_deliver)
+    def execute_gatk_joint(samples, data_deliver):
+        return gatk_joint_call_variant(samples, data_deliver)
 
-    def execute_call_variant(samples, data_deliver):
-        return call_variant(samples, data_deliver)
+    def execute_gatk_single(samples, data_deliver):
+        return gatk_call_variant(samples, data_deliver)
 
-    def execute_novel_transcripts(samples, data_deliver):
-        return noval_Transcripts(samples, data_deliver)
+    # somatic variant analysis
+    def execute_samples_only_somatic_variant(samples, data_deliver):
+        return somatic_variant_single(samples, data_deliver)
+    
+    def execute_paired_group_somatic_variant(samples, data_deliver):
+        return somatic_variant_paired(all_contrasts, data_deliver)
 
-    def execute_rmats(samples, data_deliver, all_contrasts):
-        contrasts = all_contrasts if all_contrasts else config.get('all_contrasts', [])
-        return rmats(samples, data_deliver, contrasts)
+    def execute_manta_sv_variant(samples, data_deliver):
+        return manta_sv_variant(samples, data_deliver)
 
-    # 模块函数映射表
+    # 这里的键名必须与 config.yaml 中的 germline_call_variant_type 列表项严格一致
     module_functions: Dict[str, Callable] = {
         'qc_clean': execute_qc_clean,
         'mapping': execute_mapping,
-        'call_variant': execute_call_variant,
-        'noval_Transcripts': execute_novel_transcripts,
-        'rmats': execute_rmats
+        'bcftools_single_call_variant': execute_bcftools_single,
+        'joint_call_variant': execute_gatk_joint,
+        'gatk_single_call_variant': execute_gatk_single,
+        'manta_sv_variant': execute_manta_sv_variant,
+        'paired_group_somatic_variant': execute_paired_group_somatic_variant,
+        'samples_only_somatic_variant': execute_samples_only_somatic_variant,
     }
 
+    # 根据配置解析需要运行的下游模块
+    active_callers = config.get("germline_call_variant_type", [])
+    if config.get('analysis_type') == "germline" and active_callers:
+        for module in active_callers:
+            downstream_modules.append(module)
+            
+    elif config.get('analysis_type') == "somatic":
+        if config.get('whether_paired_group'):
+            downstream_modules.append("paired_group_somatic_variant")
+        else:
+            downstream_modules.append("samples_only_somatic_variant")
+            
+    if config.get('call_SV'):
+        downstream_modules.append('manta_sv_variant')
+
     # ---------------------------------------------------------
-    # 3. 核心逻辑控制 (配置参数修正)
+    # 3. 核心逻辑控制
     # ---------------------------------------------------------
     global _qc_warning_logged
 
-    # Step 3.1: 强制开启基础模块 (除非用户显式设为 False)
+    # 默认开启基础模块
     for module in basic_modules:
         if config.get(module) is not False:
             config[module] = True
 
-
     if config.get('only_qc'):
-        # === 模式: 仅 QC (含深度质控) ===
         if not _qc_warning_logged:
             logger.warning('**********************************************************************')
             logger.warning('   [MODE] ONLY QC ENABLED                                            ')
-            logger.warning('   - Running: Raw QC, Mapping, Counting, RSeQC, BamCoverage           ')
-            logger.warning('   - Skipping: DEG, Variants, Novel Transcripts, rMATS                ')
+            logger.warning('   - Running: Raw QC, Mapping, Coverage Stats                        ')
+            logger.warning('   - Skipping: Variants (Germline/Somatic), SV Detection             ')
             logger.warning('**********************************************************************')
-            time.sleep(1)
             _qc_warning_logged = True
             
         for module in downstream_modules:
             config[module] = False
-            
     else:
         for module in downstream_modules:
             if config.get(module) is not False:
@@ -137,12 +193,7 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
     # ---------------------------------------------------------
     for module, func in module_functions.items():
         if config.get(module):
-            if module == "rmats":
-                data_deliver = func(samples, data_deliver, all_contrasts)
-            elif module == "mapping":
-                data_deliver = func(samples, data_deliver)
-            else:
-                data_deliver = func(samples, data_deliver)
+            data_deliver = func(samples, data_deliver)
 
     # ---------------------------------------------------------
     # 5. 调试输出
@@ -152,9 +203,6 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
         rich_print(data_deliver)
         
     return data_deliver
-
-
-
 
 
 def ReportData(config: dict = None) -> List[str]:

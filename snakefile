@@ -49,7 +49,8 @@ workdir: config["workflow"]
 logger.info(f"Redirect workspaces to {config['workflow']}") 
 
 # Load samples and contrasts from CSV files
-samples = load_samples(config["sample_csv"], required_cols=["sample", "sample_name", "group"])
+samples = load_samples(config["sample_csv"], required_cols=["sample", "sample_name", "group"],
+                       bam_path = "02.mapping/bwa_mem/MarkDup/")
 # load pair contrasts from CSV file
 if config.get("wheather_paired_group"):
     logger.info("don't load contrasts info") 
