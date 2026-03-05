@@ -58,14 +58,14 @@ else:
     ALL_CONTRASTS, CONTRAST_MAP = load_contrasts(config["paired_csv"], samples)
 
 # --------- 4. Rules Import --------- #
-include: 'rules/00.log.smk'
 include: 'rules/01.common.smk'
 include: 'rules/02.file_convert_md5.smk'
 include: 'rules/03.short_read_qc.smk'
 include: 'rules/04.Contamination_check.smk'
 include: 'rules/05.short_read_clean.smk'
 include: 'rules/06.mapping.smk'
-include: 'rules/07.callvraiant.smk'
+include: 'rules/07.germline.smk'
+include: 'rules/07.somatic.smk'
 include: 'rules/08.SV.smk'
 # --------- 5. Target Rule --------- #
 rule all:
