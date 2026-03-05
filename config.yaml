@@ -1,0 +1,59 @@
+# ------------------------- #
+# ------------------------- #
+# 1.WGS/WES Project INFO
+project_name: 'batch_1_ZX-R-251118068'
+Genome_Version: "Lsat_Salinas_v11" # Lsat_Salinas_v8,Lsat_Salinas_v11,ITAG4.1,TAIR10.1,GRCm39,hg38
+client: '内部测试'
+species: 'lettuce'
+
+# ------------------------- #
+# ------------------------- #
+# 2.Sample & workflow info
+# short read raw-data
+raw_data_path:
+  - /data/jzhang/project/ZX-R-251118068_RNA-SEQ_26.1.29/batch_1_ZX-R-251118068/00.raw_data
+# short read samples info
+sample_csv: /data/jzhang/project/ZX-R-251118068_RNA-SEQ_26.1.29/batch_1_ZX-R-251118068/01.workflow/samples.csv
+# paired_csv: /data/jzhang/project/ZX-R-251118068_RNA-SEQ_26.1.29/batch_1_ZX-R-251118068/01.workflow/contrasts.csv
+# workflow
+workflow: /data/jzhang/project/ZX-R-251118068_RNA-SEQ_26.1.29/batch_1_ZX-R-251118068/01.workflow
+# RNAflow Output file
+data_deliver: /data/jzhang/project/ZX-R-251118068_RNA-SEQ_26.1.29/batch_1_ZX-R-251118068/02.data_deliver
+
+# ------------------------- #
+# ------------------------- #
+# 3.Analysis Execution Mode : Local or Cluster
+execution_mode: local #local,cluster
+# queue_id : if run in cluster, please input your queue id
+# queue_id: fat_x86
+
+# ------------------------- #
+# ------------------------- #
+# 4.Pipeline Parameters
+
+# wheather only run wgs/wes qc analysis
+only_qc: true
+
+# library type
+# WES ONLY FOR HUMAN & MOUSE
+library_type: WGS # WGS,WES
+# If WES is selected, please provide the target capture regions BED file 
+# target_bed: xxxx_capture_v1.bed # dafult: NULL
+
+# sample analusis type
+analysis_type: germline # somatic,germline
+# whether paired group (only for somatic analysis)
+# true: tumor-normal somatic analysis
+# false: tumor-only somatic analysis
+whether_paired_group: false
+
+# germline Call variant type
+# joint_call_variant: gatk joint call pipeline
+# gatk_single_call_variant: single call variant pipeline by gatk
+# bcftools_single_call_variant: single call variant pipeline by bcftools (plant only)
+germline_call_variant_type:
+  - joint_call_variant
+  - bcftools_single_call_variant
+
+# whether call SV (power by manta)
+call_SV: true 

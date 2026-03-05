@@ -140,44 +140,6 @@ rule sort_index:
         samtools index -@ {threads} {output.sort_bam}) 2>{log}
         """
 
-rule bam2cram:
-    """
-    Convert BAM files to CRAM format for archival and storage efficiency.
-
-    CRAM is a highly compressed format that stores only the differences 
-    between the reads and the reference genome.
-
-    Key Benefits:
-    - Achieves 40-70% storage savings compared to BAM
-    - Full compatibility with modern bioinformatics toolchains
-    - Lossless preservation of all read data and quality scores
-    """
-    input:
-        sort_bam = '02.mapping/bwa_mem/sort_index/{sample}.sort.bam',
-        sort_bam_bai = '02.mapping/bwa_mem/sort_index/{sample}.sort.bam.bai',
-    output:
-        cram = '02.mapping/cram/{sample}.cram',
-        cram_index = '02.mapping/cram/{sample}.cram.crai',
-    resources:
-        **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
-    conda:
-        workflow.source_path("../envs/bwa2.yaml"),
-    message:
-        "Running conversion to CRAM for: {input.sort_bam}",
-    log:
-        "logs/02.mapping/bam2cram_{sample}.log",
-    benchmark:
-        "benchmarks/{sample}_bam2cram_benchmark.txt",
-    params:
-        reference = config['bwa_mem'][config['Genome_Version']]['genome_fa'],
-    threads:
-        config['parameter']['threads']['bam2cram'],
-    shell:
-        """
-        samtools view -@ {threads} -C -T {params.reference} -o {output.cram} {input.sort_bam}
-        samtools index -@ {threads} {output.cram}
-        """
-
 rule sambamba_MarkDuplicates:
     """
     Identify and mark PCR or optical duplicate reads.
@@ -241,6 +203,44 @@ rule Duplicates_bam_index:
     shell:
         """
         samtools index -@ {threads} {input.duplicates_bam} 2>{log}
+        """
+
+rule bam2cram:
+    """
+    Convert BAM files to CRAM format for archival and storage efficiency.
+
+    CRAM is a highly compressed format that stores only the differences 
+    between the reads and the reference genome.
+
+    Key Benefits:
+    - Achieves 40-70% storage savings compared to BAM
+    - Full compatibility with modern bioinformatics toolchains
+    - Lossless preservation of all read data and quality scores
+    """
+    input:
+        duplicates_bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
+        duplicates_bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
+    output:
+        cram = '02.mapping/cram/{sample}.Dup.cram',
+        cram_index = '02.mapping/cram/{sample}.Dup.cram.crai',
+    resources:
+        **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
+    conda:
+        workflow.source_path("../envs/bwa2.yaml"),
+    message:
+        "Running conversion to CRAM for: {input.duplicates_bam}",
+    log:
+        "logs/02.mapping/bam2cram_{sample}.log",
+    benchmark:
+        "benchmarks/{sample}_bam2cram_benchmark.txt",
+    params:
+        reference = config['bwa_mem'][config['Genome_Version']]['genome_fa'],
+    threads:
+        config['parameter']['threads']['bam2cram'],
+    shell:
+        """
+        samtools view -@ {threads} -C -T {params.reference} -o {output.cram} {input.duplicates_bam}
+        samtools index -@ {threads} {output.cram}
         """
 
 rule bam_coverage:
@@ -435,15 +435,15 @@ rule mapping_report:
         workflow.source_path("../envs/multiqc.yaml"),
     message:
         "Running MultiQC to aggregate mapping reports",
+    log:
+        "logs/02.mapping/multiqc_mapping_report.log",
+    benchmark:
+        "benchmarks/multiqc_mapping_report_benchmark.txt",
     params:
         fastqc_reports = "02.mapping/",
         report_dir = '02.mapping/mapping_report',
         report = "multiqc_mapping_report.html",
         title = "mapping_report",
-    log:
-        "logs/02.mapping/multiqc_mapping_report.log",
-    benchmark:
-        "benchmarks/multiqc_mapping_report_benchmark.txt",
     threads:
         config['parameter']['threads']['multiqc'],
     shell:

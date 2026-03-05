@@ -28,14 +28,15 @@ configfile: "config/cluster_config.yaml"
 load_user_config(config, cmd_arg_name='analysisyaml')
 
 # --------- 2. Processing & Validation --------- #
-# Update absolute paths for references
-resolve_reference_paths(config,
-                        config.get('can_use_genome_version', []),
+# Update absolute paths for references 
+resolve_reference_paths(config,config.get('can_use_genome_version', []),
                         base_path=config.get('reference_path'))
 
-# Validate schema and file existence
+# Validate update reference paths existence
+check_reference_paths(config.get("bwa_mem", {}))
+
+# Validate schema validation for config files
 validate(config, "schema/config.schema.yaml")
-check_reference_paths(config.get("STAR_index", {}))
 
 # Get logger instance for validation
 from snakemake_logger_plugin_rich_loguru import get_analysis_logger
@@ -43,10 +44,17 @@ logger = get_analysis_logger()
 validate_genome_version(config=config, logger=logger)
 
 # --------- 3. Workspaces & Samples --------- #
+# Redirect workspace to config['workflow'] directory 
 workdir: config["workflow"]
+logger.info(f"Redirect workspaces to {config['workflow']}") 
 
+# Load samples and contrasts from CSV files
 samples = load_samples(config["sample_csv"], required_cols=["sample", "sample_name", "group"])
-ALL_CONTRASTS, CONTRAST_MAP = load_contrasts(config["paired_csv"], samples)
+# load pair contrasts from CSV file
+if config.get("wheather_paired_group"):
+    logger.info("don't load contrasts info") 
+else:
+    ALL_CONTRASTS, CONTRAST_MAP = load_contrasts(config["paired_csv"], samples)
 
 # --------- 4. Rules Import --------- #
 include: 'rules/00.log.smk'
@@ -55,10 +63,11 @@ include: 'rules/02.file_convert_md5.smk'
 include: 'rules/03.short_read_qc.smk'
 include: 'rules/04.Contamination_check.smk'
 include: 'rules/05.short_read_clean.smk'
-include: 'rules/14.deliver.smk'
-include: 'rules/15.Report.smk'
+include: 'rules/06.mapping.smk'
+include: 'rules/07.callvraiant.smk'
+include: 'rules/08.SV.smk'
 # --------- 5. Target Rule --------- #
 rule all:
     input:
         DataDeliver(config=config,samples = samples,all_contrasts = ALL_CONTRASTS),
-        ReportData(config=config),
+        # ReportData(config=config),

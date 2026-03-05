@@ -5,7 +5,7 @@ import os
 
 def resolve_reference_paths(config, targets, base_path=None):
     """
-    解析并更新参考基因组的绝对路径。
+    解析并更新参考基因组的绝对路径,这函数可以让迁移后的分析流程自动更新到对应的应的参考基因组路径
 
     Args:
         config (dict): Snakemake 的配置字典
@@ -18,15 +18,12 @@ def resolve_reference_paths(config, targets, base_path=None):
     from snakemake_logger_plugin_rich_loguru import get_analysis_logger
     logger = get_analysis_logger()
 
-    # 0. 确定根目录 (参数优先级 > config优先级)
-    # 如果调用函数时传了 base_path，就用它；否则尝试从 config 里取
+    # get analysis reference for reference.yaml
     root_dir = base_path or config.get("reference_path")
 
     if not root_dir:
-        # 既没传参数，config 里也没有，那就没法拼了
         return
 
-    # 1. 统一转为列表处理
     if isinstance(targets, str):
         genome_list = [targets]
     elif isinstance(targets, list):
@@ -37,18 +34,15 @@ def resolve_reference_paths(config, targets, base_path=None):
 
     # logger.info(f"正在批量更新参考基因组路径: {genome_list} (Base: {root_dir})")
 
-    # 2. 循环处理列表中的每一个基因组版本
     star_index_config = config.get("STAR_index", {})
 
     for version in genome_list:
         ref_dict = star_index_config.get(version)
 
-        # 如果这个版本在 STAR_index 里不存在，就跳过
         if not ref_dict:
-            logger.warning(f"{version} 未在 STAR_index 中定义，跳过。")
+            logger.warning(f"{version} 未在 bwa_mem index 中定义，跳过。")
             continue
 
-        # 3. 更新路径
         count = 0
         for key, value in ref_dict.items():
             if isinstance(value, str):

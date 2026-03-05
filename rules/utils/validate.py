@@ -170,7 +170,6 @@ def validate_genome_version(config: Dict[str, Any], logger = None) -> str:
         logger.info(f"Genome version verified: '{clean_version}' is supported.")
         return clean_version
     else:
-        # 错误信息更友好，列出支持的列表
         msg = (f"Unsupported genome version: '{clean_version}'. "
                f"Supported versions are: {allowed_list}")
         logger.error(msg)

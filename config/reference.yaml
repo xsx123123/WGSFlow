@@ -27,6 +27,10 @@ can_use_genome_version:
   - hg38_p14            # human genome hg38.p14
   - GO                  # Gene Ontology database
 
+# Supported VSQE filter Genome Versions
+join_calling_VSQR_filter:
+  - hg38_p14
+
 # STAR Index and Reference File Configuration
 # Detailed file paths for each supported genome version
 # Each entry should contain all required reference files for the pipeline modules

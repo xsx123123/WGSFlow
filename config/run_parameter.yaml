@@ -33,7 +33,10 @@ parameter:
     samtools_flagstat: 8
     samtools_stats: 8
     bcftools: 10
-    gatk_vqsr: 10
+    gatk_vqsr: 8
+    gatk_hc: 8
+    gatk_genomicsdb: 8
+    gatk_genotype: 8
     manta: 16
     Report: 10              # Containerized report generation
     compress_bg: 8
@@ -74,14 +77,6 @@ parameter:
     ApplyVQSR_SNP: -Xmx10G
     VariantRecalibrator_INDEL: -Xmx24G
     ApplyVQSR_INDEL: -Xmx32G
-  # RNA-seq specific filtering thresholds for variant calling
-  gatk:
-    filter:
-      rna_seq:
-        window_size: 35       # Sliding window size for cluster detection
-        cluster_size: 3       # Minimum number of variants in cluster to trigger filtering
-        fs_threshold: 30.0    # Fisher Strand bias threshold (RNA-seq: 30, DNA-seq: 60)
-        qd_threshold: 2.0     # Quality by Depth threshold for variant filtering
 
   # Read Trimming and Quality Filtering
   # Parameters for adapter trimming and quality filtering with Fastp

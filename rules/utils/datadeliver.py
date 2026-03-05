@@ -58,49 +58,38 @@ def mapping(samples: Dict = None, data_deliver: List = None, config: Dict = None
     # 这些文件是后续所有分析的基础，无论 config 设置如何，都必须生成。
     # =========================================================================
     
-    # STAR Alignment Results
-    data_deliver.extend(expand("02.mapping/STAR/sort_index/{sample}.sort.bam", sample=samples.keys()))
-    data_deliver.extend(expand("02.mapping/STAR/sort_index/{sample}.sort.bam.bai", sample=samples.keys()))
-    
+    # BWA Alignment Results
+    data_deliver.extend(expand('02.mapping/bwa_mem/{sample}/{sample}.raw.bam',sample=samples.keys()))
+    data_deliver.extend(expand('02.mapping/bwa_mem/sort_index/{sample}.sort.bam',sample=samples.keys()))
+    data_deliver.extend(expand('02.mapping/bwa_mem/sort_index/{sample}.sort.bam.bai',sample=samples.keys()))
 
-    data_deliver.extend(expand("02.mapping/STAR/{sample}/{sample}.Signal.UniqueMultiple.str1.out.bg.gz", sample=samples.keys()))
-    data_deliver.extend(expand("02.mapping/STAR/{sample}/{sample}.Signal.UniqueMultiple.str2.out.bg.gz", sample=samples.keys()))
-    data_deliver.extend(expand("02.mapping/STAR/{sample}/{sample}.Signal.Unique.str1.out.bg.gz", sample=samples.keys()))
-    data_deliver.extend(expand("02.mapping/STAR/{sample}/{sample}.Signal.Unique.str2.out.bg.gz", sample=samples.keys()))
-    # Samtools Statistics
-    data_deliver.extend(expand("02.mapping/samtools_flagstat/{sample}_bam_flagstat.tsv", sample=samples.keys()))
-    data_deliver.extend(expand("02.mapping/samtools_stats/{sample}_bam_stats.tsv", sample=samples.keys()))
-    
-    # Qualimap QC
-    data_deliver.extend(expand("02.mapping/qualimap_report/{sample}/qualimapReport.html", sample=samples.keys()))
-    data_deliver.extend(expand("02.mapping/qualimap_report/{sample}/genome_results.txt", sample=samples.keys()))
-    
-    # CRAM Compression (Archiving)
-    data_deliver.extend(expand('02.mapping/cram/{sample}.cram', sample=samples.keys()))
-    data_deliver.extend(expand('02.mapping/cram/{sample}.cram.crai', sample=samples.keys()))
-    data_deliver.append('02.mapping/cram/reference_version.txt')
-    
-    # MultiQC Report for Mapping
-    data_deliver.append("02.mapping/mapping_report/multiqc_mapping_report.html")
+    # MarkDuplicates Output (BWA MEM)
+    data_deliver.extend(expand('02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',sample=samples.keys()))
 
-    if config.get('rseqc'):
-        data_deliver.extend(expand("02.mapping/read_distribution/{sample}.read_distribution.txt", sample=samples.keys()))
-        data_deliver.extend(expand("02.mapping/bamCoverage/{sample}.geneBodyCoverage.txt", sample=samples.keys()))
+    # BAM2CRAM
+    data_deliver.extend(expand('02.mapping/cram/{sample}.Dup.cram',sample=samples.keys()))
+    data_deliver.extend(expand('02.mapping/cram/{sample}.Dup.cram.crai',sample=samples.keys()))
 
-    # if config.get('tin') or config.get('rseqc'):
-    #    data_deliver.extend(expand('02.mapping/tin/{sample}.tin.xls', sample=samples.keys()))
-    #    data_deliver.extend(expand('02.mapping/tin/{sample}.summary.txt', sample=samples.keys()))
+    # Mosdepth Coverage
+    data_deliver.extend(expand("02.mapping/mosdepth_coverage/{sample}.sort.Dup.global.dist.txt",sample=samples.keys()))
+    data_deliver.extend(expand("02.mapping/mosdepth_coverage/{sample}.sort.Dup.mosdepth.summary.txt",sample=samples.keys()))
 
-    if config.get('bamCoverage'):
-        normalize_method = config.get('parameter', {}).get('bamCoverage', {}).get('normalizeUsing', 'RPKM')
-        
-        # 动态生成 BigWig 文件路径
-        for sample in samples.keys():
-            data_deliver.append(f"02.mapping/bamCoverage/{sample}_{normalize_method}.bw")
+    # qualimap qc
+    data_deliver.extend(expand('02.mapping/qualimap_report/{sample}/qualimapReport.html',sample=samples.keys()))
+    data_deliver.extend(expand('02.mapping/qualimap_report/{sample}/genome_results.txt',sample=samples.keys()))
+
+    # samtools flagst
+    data_deliver.extend(expand('02.mapping/samtools_flagstat/{sample}_dup_bam_flagstat.tsv',sample=samples.keys()))
+    
+    # samtools stats
+    data_deliver.extend(expand('02.mapping/samtools_stats/{sample}_dup_bam_stats.tsv',sample=samples.keys()))
+
+    # mapping_report
+    data_deliver.append("02.mapping/mapping_report/mapping_report.html")
 
     return data_deliver
 
-def call_variant(samples: Dict = None, data_deliver: List = None) -> List:
+def bcftools_call_variant(samples: Dict = None, data_deliver: List = None) -> List:
     """
     Handle variant calling analysis.
 
@@ -116,10 +105,24 @@ def call_variant(samples: Dict = None, data_deliver: List = None) -> List:
     if data_deliver is None:
         data_deliver = []
 
-    data_deliver.extend(expand("04.variant/gatk/{sample}/{sample}.final.pass.vcf", sample=samples.keys()))
-    data_deliver.extend(expand("04.variant/gatk/{sample}/{sample}.final.pass.vcf.idx", sample=samples.keys()))
-    data_deliver.extend(expand("04.variant/gatk_bcftools_stats_raw/{sample}.raw_variants.stats", sample=samples.keys()))
-    data_deliver.extend(expand("04.variant/gatk_bcftools_stats_pass/{sample}.final.pass.stats", sample=samples.keys()))
-    data_deliver.append('04.variant/multiqc_gatk_bcftools_stats_raw/multiqc_gatk_bcftools_stats_raw.html')
-    data_deliver.append('04.variant/multiqc_gatk_bcftools_stats_pass/multiqc_gatk_bcftools_stats_pass.html')
+    # bcftools call variant
+    data_deliver.extend(expand('03.call_variant/{sample}.sort.vcf.gz',sample=samples.keys()))
+    data_deliver.extend(expand('03.call_variant/{sample}.sort.vcf.csi',sample=samples.keys()))
+    data_deliver.extend(expand('03.call_variant/{sample}.sort.vcf.tbi',sample=samples.keys()))
+
+    # merge & filter variant
+    data_deliver.append('04.filter_variant/merge_filter.sort.vcf.gz')
+    data_deliver.append('04.filter_variant/merge_filter.sort.vcf.gz.csi')
+    data_deliver.append('04.filter_variant/merge_filter.sort.vcf.gz.tbi')
+
+    # SnpEff Annotation Variant
+    data_deliver.append('04.filter_variant/merge_filter.sort.annotation.csv')
+    adata_deliver.append('04.filter_variant/merge_filter.sort.annotation.html')
+    data_deliver.append('04.filter_variant/merge_filter.sort.annotation.vcf')
+
+    # bcftools stats multiqc report
+    data_deliver.append('03.call_variant/multiqc_variant_stats/multiqc_callvariant_report.html')
+    
     return data_deliver
+
+
