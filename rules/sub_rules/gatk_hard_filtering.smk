@@ -22,7 +22,7 @@ from loguru import logger
 
 # ----- rule ----- #
 
-rule gatk_hard_filtering:
+rule gatk_joint_hard_filtering:
     """
     Apply standard GATK Hard Filters to the cohort VCF.
 
@@ -44,8 +44,8 @@ rule gatk_hard_filtering:
         vcf = '03.call_variant/join_calling/cohort_raw.vcf.gz',
         tbi = '03.call_variant/join_calling/cohort_raw.vcf.gz.tbi',
     output:
-        vcf = '03.call_variant/join_calling/cohort_filtered.vcf.gz',
-        tbi = '03.call_variant/join_calling/cohort_filtered.vcf.gz.tbi',
+        vcf = '04.filter_variant/cohort_filtered.vcf.gz',
+        tbi = '04.filter_variant/cohort_filtered.vcf.gz.tbi',
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
@@ -57,6 +57,8 @@ rule gatk_hard_filtering:
         snp_filter = "QD < 2.0 || MQ < 40.0 || FS > 60.0 || SOR > 3.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0",
         indel_filter = "QD < 2.0 || FS > 200.0 || SOR > 10.0 || ReadPosRankSum < -20.0",
         ref = config['bwa_mem'][config['Genome_Version']]['genome_fa'],
+    threads:
+        1
     shell:
         """
         gatk --java-options "{params.java_opts}" VariantFiltration \

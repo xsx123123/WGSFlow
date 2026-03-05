@@ -38,9 +38,9 @@ rule VariantRecalibrator_SNP:
         vcf = '03.call_variant/join_calling/cohort_raw.vcf.gz',
         tbi = '03.call_variant/join_calling/cohort_raw.vcf.gz.tbi',
     output:
-        recal = '03.call_variant/VQSR_Filtering/cohort_snp.recal',
-        tranches = '03.call_variant/VQSR_Filtering/cohort_snp.tranches',
-        plots = '03.call_variant/VQSR_Filtering/cohort_snp_plots.R',
+        recal = '04.filter_variant/VQSR_Filtering/cohort_snp.recal',
+        tranches = '04.filter_variant/VQSR_Filtering/cohort_snp.tranches',
+        plots = '04.filter_variant/VQSR_Filtering/cohort_snp_plots.R',
     resources:
         **rule_resource(config, 'high_resource', skip_queue_on_local=True, logger=logger),
     conda:
@@ -83,13 +83,13 @@ rule ApplyVQSR_SNP:
     truth sensitivity threshold.
     """
     input:
+        recal = '04.filter_variant/VQSR_Filtering/cohort_snp.recal',
+        tranches = '04.filter_variant/VQSR_Filtering/cohort_snp.tranches',
         vcf = '03.call_variant/join_calling/cohort_raw.vcf.gz',
         tbi = '03.call_variant/join_calling/cohort_raw.vcf.gz.tbi',
-        recal = '03.call_variant/VQSR_Filtering/cohort_snp.recal',
-        tranches = '03.call_variant/VQSR_Filtering/cohort_snp.tranches',
     output:
-        vcf = '03.call_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz',
-        tbi = '03.call_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz.tbi',
+        vcf = '04.filter_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz',
+        tbi = '04.filter_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz.tbi',
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
@@ -99,6 +99,8 @@ rule ApplyVQSR_SNP:
     params:
         ref = config['bwa_mem'][config['Genome_Version']]['genome_fa'],
         gatk_memory = config['parameter']['gatk_memory']["ApplyVQSR_SNP"],
+    threads:
+        1
     shell:
         """
         gatk --java-options "{params.gatk_memory}" ApplyVQSR \
@@ -111,7 +113,6 @@ rule ApplyVQSR_SNP:
             -mode SNP &> {log}
         """
 
-
 rule VariantRecalibrator_INDEL:
     """
     Step 3: Build a recalibration model for INDELs.
@@ -120,12 +121,12 @@ rule VariantRecalibrator_INDEL:
     Uses Mills and dbSNP as the truth/training sets.
     """
     input:
-        vcf = '03.call_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz',
-        tbi = '03.call_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz.tbi',
+        vcf = '04.filter_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz',
+        tbi = '04.filter_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz.tbi',
     output:
-        recal = '03.call_variant/VQSR_Filtering/cohort_indel.recal',
-        tranches = '03.call_variant/VQSR_Filtering/cohort_indel.tranches',
-        plots = '03.call_variant/VQSR_Filtering/cohort_indel_plots.R',
+        recal = '04.filter_variant/VQSR_Filtering/cohort_indel.recal',
+        tranches = '04.filter_variant/VQSR_Filtering/cohort_indel.tranches',
+        plots = '04.filter_variant/VQSR_Filtering/cohort_indel_plots.R',
     resources:
         **rule_resource(config, 'high_resource', skip_queue_on_local=True, logger=logger),
     conda:
@@ -137,6 +138,8 @@ rule VariantRecalibrator_INDEL:
         mills = config['bwa_mem'][config['Genome_Version']]['Mills'],
         dbsnp = config['bwa_mem'][config['Genome_Version']]['dbsnp138'],
         gatk_memory = config['parameter']['gatk_memory']["VariantRecalibrator_INDEL"],
+    threads:
+        1
     shell:
         """
         gatk --java-options "{params.gatk_memory}" VariantRecalibrator \
@@ -160,13 +163,13 @@ rule ApplyVQSR_INDEL:
     VCF is the final high-quality output of the VQSR pipeline.
     """
     input:
-        vcf = '03.call_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz',
-        tbi = '03.call_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz.tbi',
-        recal = '03.call_variant/VQSR_Filtering/cohort_indel.recal',
-        tranches = '03.call_variant/VQSR_Filtering/cohort_indel.tranches',
+        vcf = '04.filter_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz',
+        tbi = '04.filter_variant/VQSR_Filtering/cohort_snp_recalibrated.vcf.gz.tbi',
+        recal = '04.filter_variant/VQSR_Filtering/cohort_indel.recal',
+        tranches = '04.filter_variant/VQSR_Filtering/cohort_indel.tranches',
     output:
-        vcf = '03.call_variant/VQSR_Filtering/cohort_final_vqsr.vcf.gz',
-        tbi = '03.call_variant/VQSR_Filtering/cohort_final_vqsr.vcf.gz.tbi',
+        vcf = '04.filter_variant/cohort_filtered.vcf.gz',
+        tbi = '04.filter_variant/cohort_filtered.vcf.gz.tbi',
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
@@ -176,6 +179,8 @@ rule ApplyVQSR_INDEL:
     params:
         ref = config['bwa_mem'][config['Genome_Version']]['genome_fa'],
         gatk_memory = config['parameter']['gatk_memory']["ApplyVQSR_INDEL"],
+    threads:
+        1
     shell:
         """
         gatk --java-options {params.gatk_memory} ApplyVQSR \
