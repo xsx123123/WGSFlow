@@ -53,9 +53,12 @@ samples = load_samples(config["sample_csv"], required_cols=["sample", "sample_na
                        bam_path = "02.mapping/bwa_mem/MarkDup/")
 # load pair contrasts from CSV file
 if config.get("whether_paired_group"):
-    logger.info("don't load contrasts info") 
-else:
+    logger.info("Loading contrasts info for paired somatic analysis")
     ALL_CONTRASTS, CONTRAST_MAP = load_contrasts(config["paired_csv"], samples)
+else:
+    logger.info("No contrasts needed for tumor-only somatic analysis")
+    ALL_CONTRASTS = {}
+    CONTRAST_MAP = {}
 
 # --------- 4. Rules Import --------- #
 include: 'rules/01.common.smk'
