@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-RNAFlow Pipeline - Common Utility Functions Module
+WGSFlow Pipeline - Common Utility Functions Module
 
 This module provides essential utility functions that are used across multiple
-rules in the RNA-seq analysis pipeline. It handles core functionality including:
+rules in the Whole Genome Sequencing (WGS) analysis pipeline. It handles core functionality including:
 
 Key Components:
 - Data delivery orchestration (DataDeliver function)
 - Report data collection (ReportData function)
 - Sample data directory resolution
-- Reference index validation (BWA, STAR)
+- Reference index validation (BWA)
 - Genome version compatibility checking
 
 These functions ensure consistent behavior across the pipeline and provide
@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Dict, Union, List, Callable
 from rich import print as rich_print
 
-from datadeliver import ( 
+from datadeliver import (
     qc_clean,
     mapping,
     bcftools_call_variant,
@@ -34,50 +34,21 @@ from datadeliver import (
     gatk_joint_call_variant,
     manta_sv_variant,
     somatic_variant_paired,
-    somatic_variant_single
+    somatic_variant_single,
 )
 
 # Import logger for consistent logging
 from snakemake_logger_plugin_rich_loguru import get_analysis_logger
+
 logger = get_analysis_logger()
 
 # Flag to track if the QC warning has already been displayed
 _qc_warning_logged = False
 
-"""
-WGSFlow Pipeline - Common Utility Functions Module
 
-This module provides essential utility functions that are used across multiple
-rules in the Whole Genome Sequencing (WGS) analysis pipeline.
-"""
-
-import os
-import glob
-import sys
-import time
-from pathlib import Path
-from typing import Dict, Union, List, Callable
-from rich import print as rich_print
-
-from datadeliver import ( 
-    qc_clean,
-    mapping,
-    bcftools_call_variant,
-    gatk_call_variant,
-    gatk_joint_call_variant,
-    manta_sv_variant,
-    somatic_variant_paired,
-    somatic_variant_single
-)
-
-# Import logger for consistent logging
-from snakemake_logger_plugin_rich_loguru import get_analysis_logger
-logger = get_analysis_logger()
-
-# Flag to track if the QC warning has already been displayed
-_qc_warning_logged = False
-
-def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict = None) -> List[str]:
+def DataDeliver(
+    config: Dict = None, samples: Dict = None, all_contrasts: Dict = None
+) -> List[str]:
     """
     Main data delivery orchestrator.
     Controls the flow of the pipeline based on 'only_qc' and specific module flags.
@@ -85,23 +56,23 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
     # Initialize config/samples if None
     config = config or {}
     samples = samples or {}
-    
+
     # ---------------------------------------------------------
     # 0. 初始化基础文件列表 (MD5 Check)
     # ---------------------------------------------------------
-    convert_md5_path = config.get('convert_md5', 'md5_check') 
+    convert_md5_path = config.get("convert_md5", "md5_check")
     data_deliver = [
         "01.qc/md5_check.tsv",
-        os.path.join('00.raw_data', convert_md5_path),
-        os.path.join('00.raw_data', convert_md5_path, "raw_data_md5.json")
+        os.path.join("00.raw_data", convert_md5_path),
+        os.path.join("00.raw_data", convert_md5_path, "raw_data_md5.json"),
     ]
 
     # ---------------------------------------------------------
     # 1. 定义模块类别
     # ---------------------------------------------------------
-    
+
     # [A] 基础模块：QC 和 Mapping 是所有 WGS 流程的核心
-    basic_modules = ['qc_clean', 'mapping']
+    basic_modules = ["qc_clean", "mapping"]
 
     # [B] 下游分析模块：由配置动态加载
     downstream_modules = []
@@ -128,8 +99,8 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
     # somatic variant analysis
     def execute_samples_only_somatic_variant(samples, data_deliver):
         return somatic_variant_single(samples, data_deliver)
-    
-    def execute_paired_group_somatic_variant(samples, data_deliver):
+
+    def execute_paired_group_somatic_variant(_, data_deliver):
         return somatic_variant_paired(all_contrasts, data_deliver)
 
     def execute_manta_sv_variant(samples, data_deliver):
@@ -137,30 +108,30 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
 
     # 这里的键名必须与 config.yaml 中的 germline_call_variant_type 列表项严格一致
     module_functions: Dict[str, Callable] = {
-        'qc_clean': execute_qc_clean,
-        'mapping': execute_mapping,
-        'bcftools_single_call_variant': execute_bcftools_single,
-        'joint_call_variant': execute_gatk_joint,
-        'gatk_single_call_variant': execute_gatk_single,
-        'manta_sv_variant': execute_manta_sv_variant,
-        'paired_group_somatic_variant': execute_paired_group_somatic_variant,
-        'samples_only_somatic_variant': execute_samples_only_somatic_variant,
+        "qc_clean": execute_qc_clean,
+        "mapping": execute_mapping,
+        "bcftools_single_call_variant": execute_bcftools_single,
+        "joint_call_variant": execute_gatk_joint,
+        "gatk_single_call_variant": execute_gatk_single,
+        "manta_sv_variant": execute_manta_sv_variant,
+        "paired_group_somatic_variant": execute_paired_group_somatic_variant,
+        "samples_only_somatic_variant": execute_samples_only_somatic_variant,
     }
 
     # 根据配置解析需要运行的下游模块
     active_callers = config.get("germline_call_variant_type", [])
-    if config.get('analysis_type') == "germline" and active_callers:
+    if config.get("analysis_type") == "germline" and active_callers:
         for module in active_callers:
             downstream_modules.append(module)
-            
-    elif config.get('analysis_type') == "somatic":
-        if config.get('whether_paired_group'):
+
+    elif config.get("analysis_type") == "somatic":
+        if config.get("whether_paired_group"):
             downstream_modules.append("paired_group_somatic_variant")
         else:
             downstream_modules.append("samples_only_somatic_variant")
-            
-    if config.get('call_SV'):
-        downstream_modules.append('manta_sv_variant')
+
+    if config.get("call_SV"):
+        downstream_modules.append("manta_sv_variant")
 
     # ---------------------------------------------------------
     # 3. 核心逻辑控制
@@ -172,15 +143,25 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
         if config.get(module) is not False:
             config[module] = True
 
-    if config.get('only_qc'):
+    if config.get("only_qc"):
         if not _qc_warning_logged:
-            logger.warning('**********************************************************************')
-            logger.warning('   [MODE] ONLY QC ENABLED                                            ')
-            logger.warning('   - Running: Raw QC, Mapping, Coverage Stats                        ')
-            logger.warning('   - Skipping: Variants (Germline/Somatic), SV Detection             ')
-            logger.warning('**********************************************************************')
+            logger.warning(
+                "**********************************************************************"
+            )
+            logger.warning(
+                "   [MODE] ONLY QC ENABLED                                            "
+            )
+            logger.warning(
+                "   - Running: Raw QC, Mapping, Coverage Stats                        "
+            )
+            logger.warning(
+                "   - Skipping: Variants (Germline/Somatic), SV Detection             "
+            )
+            logger.warning(
+                "**********************************************************************"
+            )
             _qc_warning_logged = True
-            
+
         for module in downstream_modules:
             config[module] = False
     else:
@@ -198,16 +179,16 @@ def DataDeliver(config: Dict = None, samples: Dict = None, all_contrasts: Dict =
     # ---------------------------------------------------------
     # 5. 调试输出
     # ---------------------------------------------------------
-    if config.get('print_target'):
+    if config.get("print_target"):
         rich_print("[bold green]Generated Target Files:[/bold green]")
         rich_print(data_deliver)
-        
+
     return data_deliver
 
 
 def ReportData(config: dict = None) -> List[str]:
     """
-    Collects all files required for generating the final Quarto RNA-seq analysis report.
+    Collects all files required for generating the final Quarto WGS analysis report.
 
     This function returns the list of manifest files, summary JSON, and HTML report
     that are needed for the final delivery and reporting stage of the pipeline.
@@ -219,19 +200,24 @@ def ReportData(config: dict = None) -> List[str]:
         List[str]: List of report-related file paths, or empty list if reporting
                    is disabled in configuration.
     """
-    if config.get('report'):
+    if config.get("report"):
         return [
-                os.path.join(config['data_deliver'],'delivery_manifest.json'),
-                os.path.join(config['data_deliver'],'delivery_manifest.md5'),
-                os.path.join(config['data_deliver'],'delivery_details.log'),
-                os.path.join(config['data_deliver'],'report_data/project_summary.json'),
-                os.path.join(config['data_deliver'],'report_data','delivery_manifest.json'),
-                os.path.join(config['data_deliver'],'report_data','delivery_manifest.md5'),
-                os.path.join(config['data_deliver'],'report_data','delivery_details.log'),
-                os.path.join(config['data_deliver'], "Analysis_Report/index.html")
-                ]
+            os.path.join(config["data_deliver"], "delivery_manifest.json"),
+            os.path.join(config["data_deliver"], "delivery_manifest.md5"),
+            os.path.join(config["data_deliver"], "delivery_details.log"),
+            os.path.join(config["data_deliver"], "report_data/project_summary.json"),
+            os.path.join(
+                config["data_deliver"], "report_data", "delivery_manifest.json"
+            ),
+            os.path.join(
+                config["data_deliver"], "report_data", "delivery_manifest.md5"
+            ),
+            os.path.join(config["data_deliver"], "report_data", "delivery_details.log"),
+            os.path.join(config["data_deliver"], "Analysis_Report/index.html"),
+        ]
     else:
         return []
+
 
 def get_sample_data_dir(sample_id: str = None, config: dict = None) -> str:
     """
@@ -262,7 +248,6 @@ def get_sample_data_dir(sample_id: str = None, config: dict = None) -> str:
 
     # Iterate through all raw data paths in the config
     for base_dir in config["raw_data_path"]:
-
         # --- Case A: Your previous logic (raw_data/SampleID/xxx.fq) ---
         sample_subdir = os.path.join(base_dir, sample_id)
         if os.path.isdir(sample_subdir):
@@ -284,10 +269,12 @@ def get_sample_data_dir(sample_id: str = None, config: dict = None) -> str:
                 return base_dir
 
     # If the loop ends without finding anything
-    raise FileNotFoundError(f"Could not find data directory or files for {sample_id} in {config['raw_data_path']}")
+    raise FileNotFoundError(
+        f"Could not find data directory or files for {sample_id} in {config['raw_data_path']}"
+    )
 
-def get_all_input_dirs(sample_keys: str = None,
-                       config: dict = config) -> list:
+
+def get_all_input_dirs(sample_keys=None, config: dict = None) -> list:
     """
     Aggregates unique input directories for all specified samples.
 
@@ -295,17 +282,20 @@ def get_all_input_dirs(sample_keys: str = None,
     directories using get_sample_data_dir(), then returns a deduplicated list.
 
     Args:
-        sample_keys (str): Iterable of sample identifiers
+        sample_keys: Iterable of sample identifiers
         config (dict): Pipeline configuration dictionary
 
     Returns:
         list: Deduplicated list of input directories containing sample data
     """
+    if sample_keys is None or config is None:
+        return []
     dir_list = []
     for sample_id in sample_keys:
-        dir_list.append(get_sample_data_dir(sample_id, config = config))
+        dir_list.append(get_sample_data_dir(sample_id, config=config))
 
     return list(set(dir_list))
+
 
 def judge_bwa_index(config: dict = None) -> bool:
     """
@@ -321,69 +311,16 @@ def judge_bwa_index(config: dict = None) -> bool:
     Returns:
         bool: True if index files are missing (needs rebuild), False if complete
     """
-    bwa_index = config['bwa_mem2']['index']
-    bwa_index_files = [bwa_index + suffix for suffix in ['.0123', '.amb', '.ann', '.bwt.2bit.64', '.pac', '.alt']]
+    bwa_index = config["bwa_mem2"]["index"]
+    bwa_index_files = [
+        bwa_index + suffix
+        for suffix in [".0123", ".amb", ".ann", ".bwt.2bit.64", ".pac", ".alt"]
+    ]
 
     return not all(os.path.exists(f) for f in bwa_index_files)
 
-def judge_star_index(config: dict, Genome_Version: str) -> bool:
-    """
-    Validates STAR index completeness by checking for required index files.
 
-    STAR aligner requires a comprehensive set of index files generated during
-    the indexing process. This function verifies that all necessary files are
-    present and returns True if the index needs to be rebuilt.
-
-    Args:
-        config (dict): Pipeline configuration with 'STAR_index' section
-        Genome_Version (str): Specific genome version to validate
-
-    Returns:
-        bool: True if index files are missing (needs rebuild), False if complete
-
-    Raises:
-        KeyError: If the specified genome version is not found in configuration
-    """
-
-    try:
-        star_config = config['STAR_index'][Genome_Version]
-        index_dir = star_config['index']
-    except KeyError:
-        print(f"Error: Genome Version '{Genome_Version}' not found in config or structure incorrect.")
-        sys.exit(1)
-
-    if not os.path.isdir(index_dir):
-        return True
-
-    required_files = [
-        "chrLength.txt",
-        "exonGeTrInfo.tab",
-        "genomeParameters.txt",
-        "sjdbInfo.txt",
-        "chrNameLength.txt",
-        "exonInfo.tab",
-        "Log.out",
-        "sjdbList.fromGTF.out.tab",
-        "chrName.txt",
-        "geneInfo.tab",
-        "SA",
-        "sjdbList.out.tab",
-        "chrStart.txt",
-       " Genome",
-        "SAindex",
-        "transcriptInfo.tab"
-    ]
-
-    full_paths = [os.path.join(index_dir, f) for f in required_files]
-
-    missing_files = [f for f in full_paths if not os.path.exists(f)]
-
-    if missing_files:
-        return True
-
-    return False
-
-def check_gene_version(config: dict = None, logger = None) -> None:
+def check_gene_version(config: dict = None, logger=None) -> None:
     """
     Validates that the configured genome version is supported by the pipeline.
 
@@ -404,11 +341,12 @@ def check_gene_version(config: dict = None, logger = None) -> None:
     # Use the provided logger or get the unified logger
     if logger is None:
         from snakemake_logger_plugin_rich_loguru import get_analysis_logger
+
         logger = get_analysis_logger()
 
     try:
-        version = config['Genome_Version']
-        allowed = config['can_use_genome_version']
+        version = config["Genome_Version"]
+        allowed = config["can_use_genome_version"]
 
         if version not in allowed:
             logger.error(f"Version mismatch! '{version}' is not in {allowed}")
@@ -422,4 +360,6 @@ def check_gene_version(config: dict = None, logger = None) -> None:
     except TypeError:
         logger.error("Config must be a valid dictionary.")
         raise
+
+
 # --------------------- #

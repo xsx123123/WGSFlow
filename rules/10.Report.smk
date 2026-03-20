@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-RNAFlow Pipeline - Final Report Generation Module
+WGSFlow Pipeline - Final Report Generation Module
 
-This module handles the generation of the final interactive HTML report for the RNA-seq
+This module handles the generation of the final interactive HTML report for the WGS
 analysis pipeline. The report is created using a containerized Quarto-based reporting
 system that provides a comprehensive, user-friendly interface for exploring all analysis
 results.

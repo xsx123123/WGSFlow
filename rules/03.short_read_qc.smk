@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-RNAFlow Pipeline - Short Read Quality Control Module
+WGSFlow Pipeline - Short Read Quality Control Module
 
 This module performs comprehensive quality control analysis on raw sequencing reads
 using FastQC and MultiQC. The analysis is performed separately on R1 and R2 reads

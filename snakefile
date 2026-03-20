@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # *---utf-8---*
-# Version: RNAFlow v0.1.7
+# Version: WGSFlow v0.0.1
 # Author : JZHANG
 
 import sys
@@ -52,7 +52,7 @@ logger.info(f"Redirect workspaces to {config['workflow']}")
 samples = load_samples(config["sample_csv"], required_cols=["sample", "sample_name", "group"],
                        bam_path = "02.mapping/bwa_mem/MarkDup/")
 # load pair contrasts from CSV file
-if config.get("wheather_paired_group"):
+if config.get("whether_paired_group"):
     logger.info("don't load contrasts info") 
 else:
     ALL_CONTRASTS, CONTRAST_MAP = load_contrasts(config["paired_csv"], samples)
@@ -71,4 +71,5 @@ include: 'rules/08.SV.smk'
 rule all:
     input:
         DataDeliver(config=config,samples = samples,all_contrasts = ALL_CONTRASTS),
+        # ReportData(config=config),RASTS),
         # ReportData(config=config),

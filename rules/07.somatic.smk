@@ -71,8 +71,8 @@ rule mutect2_calling:
     params:
         normal_name = lambda wildcards: CONTRAST_MAP[wildcards.contrast]["normal_name"],
         java_opts = "-Xmx16G -XX:ParallelGCThreads=2",
-        pon = config['ploidy_setting'][config['Genome_Version']]['pon'],
-        germline = config['ploidy_setting'][config['Genome_Version']]['germline'],
+        pon = config['bwa_mem'][config['Genome_Version']]['pon'],
+        germline = config['bwa_mem'][config['Genome_Version']]['germline'],
     threads: 
         config['parameter']['threads'].get('mutect2', 8)
     shell:
@@ -143,7 +143,7 @@ rule get_pileup_summaries:
     wildcard_constraints:
         type = "tumor|normal"
     params:
-        common_variants = config['ploidy_setting'][config['Genome_Version']]['common_variants_vcf'],
+        common_variants = config['bwa_mem'][config['Genome_Version']]['common_variants_vcf'],
     threads:
         1
     shell:

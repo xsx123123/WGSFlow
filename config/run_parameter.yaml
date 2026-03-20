@@ -1,4 +1,4 @@
-# RNAFlow Pipeline - Runtime Parameter Configuration
+# WGSFlow Pipeline - Runtime Parameter Configuration
 #
 # This file contains detailed runtime parameters for individual pipeline tools and modules.
 # It defines software-specific settings, thread allocations, quality thresholds, and
@@ -12,7 +12,7 @@
 #
 # Note: These parameters should be adjusted based on your specific experimental design,
 # data quality, and computational resources. Default values are optimized for typical
-# RNA-seq experiments but may need tuning for specific use cases.
+# WGS experiments but may need tuning for specific use cases.
 
 # Runtime Parameters Configuration
 parameter:
@@ -40,6 +40,7 @@ parameter:
     mutect2: 8
     manta: 16
     Report: 10              # Containerized report generation
+    wgsflow-cli: 10         # WGSFlow data delivery tool
     compress_bg: 8
   # BAM Alignment Parameters
   bwa_mem:
@@ -87,8 +88,8 @@ parameter:
     adapter_fasta: "../data/Universal_Adapter.fa"           # Custom adapter sequences file
 
   # Data Delivery Configuration
-  # Settings for the RNAFlow data delivery and organization system
-  RNAFlow_Deliver_Tool:
+  # Settings for the WGSFlow data delivery and organization system
+  WGSFlow_Deliver_Tool:
     config_path: "../src/src/data-deliver/RNAFlow_Deliver_Tool/config/full_delivery_config.yaml"
     config_path_report: "../src/src/data-deliver/RNAFlow_Deliver_Tool/config/report.yaml"
 

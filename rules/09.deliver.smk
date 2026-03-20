@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-RNAFlow Pipeline - Data Delivery and Final Report Generation Module
+WGSFlow Pipeline - Data Delivery and Final Report Generation Module
 
-This module handles the final organization and delivery of RNA-seq analysis results
-using the Rust-accelerated rnaflow-cli delivery tool. The delivery process ensures
+This module handles the final organization and delivery of WGS analysis results
+using the Rust-accelerated wgsflow-cli delivery tool. The delivery process ensures
 that all analysis outputs are properly organized, validated, and prepared for
 downstream use or sharing with collaborators.
 
@@ -20,7 +20,7 @@ The delivery tool performs several critical functions:
 - Configuration-driven file selection based on analysis modules enabled
 - Efficient file copying/symlinking with parallel processing support
 
-This module represents the final step in the RNA-seq analysis pipeline, ensuring that
+This module represents the final step in the WGS analysis pipeline, ensuring that
 results are delivered in a consistent, reproducible, and well-documented format.
 """
 
@@ -29,9 +29,9 @@ import pandas as pd
 
 rule delivery:
     """
-    Execute the main data delivery process using the Rust-accelerated rnaflow-cli tool.
+    Execute the main data delivery process using the Rust-accelerated wgsflow-cli tool.
 
-    This rule orchestrates the final organization and transfer of all RNA-seq analysis
+    This rule orchestrates the final organization and transfer of all WGS analysis
     results to a designated delivery directory. The delivery process is driven by the
     DataDeliver() function which dynamically determines which files should be included
     based on the analysis modules that were enabled in the pipeline configuration.
@@ -43,7 +43,7 @@ rule delivery:
     - Detailed delivery log capturing the complete delivery process
     - Configuration-driven file selection based on enabled analysis modules
 
-    The rnaflow-cli tool is optimized for performance using Rust, enabling efficient
+    The wgsflow-cli tool is optimized for performance using Rust, enabling efficient
     handling of large datasets with parallel file operations and minimal memory overhead.
 
     Outputs:
@@ -63,17 +63,17 @@ rule delivery:
         workflow.source_path("../envs/py3.12.yaml"),
     params:
         out_dir = config['data_deliver'],
-        config_path = workflow.source_path(config['parameter']['RNAFlow_Deliver_Tool']['config_path']),
+        config_path = workflow.source_path(config['parameter']['WGSFlow_Deliver_Tool']['config_path']),
         source_dir = config['workflow'],
     log:
         "logs/delivery.log",
     benchmark:
         "benchmark/delivery.txt",
     threads:
-        config['parameter']['threads']['rnaflow-cli'],
+        config['parameter']['threads']['wgsflow-cli'],
     shell:
         """
-        ( rnaflow-cli deliver \
+        ( wgsflow-cli deliver \
                     -d {params.source_dir} \
                     -o {params.out_dir} \
                     -c {params.config_path} ) &>{log}
@@ -119,17 +119,17 @@ rule delivery_report:
         workflow.source_path("../envs/py3.12.yaml"),
     params:
         out_dir =  os.path.join(config['data_deliver'],'report_data'),
-        config_path = workflow.source_path(config['parameter']['RNAFlow_Deliver_Tool']['config_path_report']),
+        config_path = workflow.source_path(config['parameter']['WGSFlow_Deliver_Tool']['config_path_report']),
         source_dir = config['workflow'],
     log:
         "logs/delivery_report.log",
     benchmark:
         "benchmark/delivery_report.txt",
     threads:
-        config['parameter']['threads']['rnaflow-cli'],
+        config['parameter']['threads']['wgsflow-cli'],
     shell:
         """
-        ( rnaflow-cli deliver \
+        ( wgsflow-cli deliver \
                     -d {params.source_dir} \
                     -o {params.out_dir} \
                     -c {params.config_path}  ) &>{log}

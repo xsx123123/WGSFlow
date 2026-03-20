@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-RNAFlow Pipeline - Contamination Screening Module
+WGSFlow Pipeline - Contamination Screening Module
 
-This module performs comprehensive contamination screening of RNA-seq data using
+This module performs comprehensive contamination screening of WGS data using
 fastq_screen, which checks for the presence of reads originating from common
 contaminant sources such as bacteria, viruses, fungi, and other organisms.
 

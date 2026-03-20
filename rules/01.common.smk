@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-RNAFlow Pipeline - Logging and Runtime Information Module
+WGSFlow Pipeline - Logging and Runtime Information Module
 
 This module handles the initialization of the logging system and captures
-essential runtime information at the start of the RNA-seq analysis pipeline.
+essential runtime information at the start of the WGS analysis pipeline.
 
 Key Responsibilities:
 - Initialize the unified Rich/Loguru logger
@@ -39,7 +39,7 @@ except ImportError:
         logger.warning("Neither custom plugin nor loguru found. Using built-in logging.")
         logger_type = "Built-in Logging"
 
-from utils.common import (
+from rules.utils.common import (
     DataDeliver,
     ReportData,
     get_sample_data_dir,

@@ -1,6 +1,8 @@
-# DNAFlow v0.0.1 - 高效模块化全基因组分析流程
+# WGSFlow v0.0.1 - 高效模块化全基因组分析流程
 
-**DNAFlow** 是一款基于 Snakemake 开发的、面向工业级应用的 WGS/WES 自动化分析流程。它遵循 GATK Best Practices 和群体遗传学标准，旨在提供高度灵活、可扩展且透明的基因组变异检测方案。
+**WGSFlow** 是一款基于 Snakemake 开发的、面向工业级应用的 WGS 自动化分析流程。它遵循 GATK Best Practices 和群体遗传学标准，旨在提供高度灵活、可扩展且透明的基因组变异检测方案。
+
+> ⚠️ **注意**：当前版本 (v0.0.1) 仅支持 **WGS (全基因组测序)** 分析。WES (全外显子组测序) 分析流程正在规划中，将在后续大版本中推出。
 
 ## 🚀 今日更新摘要 (2026-03-05)
 
@@ -23,19 +25,99 @@
 ## 🛠️ 核心架构
 
 ```text
-DNAFlow/
+WGSFlow/
 ├── rules/
 │   ├── 06.mapping.smk       # 比对与质控 (BWA-MEM, MarkDup, Qualimap)
-│   ├── 07.callvariant.smk   # Germline 调度器 (支持 Bcf/GATK 动态加载)
+│   ├── 07.germline.smk      # Germline 调度器 (支持 Bcf/GATK 动态加载)
 │   ├── 07.somatic.smk       # Somatic 流程 (Mutect2 完整过滤链)
+│   ├── 08.SV.smk            # 结构变异检测 (Manta)
 │   └── sub_rules/           # 具体算法实现模块 (VQSR, HardFilter 等)
-├── utils/
+├── rules/utils/
 │   ├── common.py            # DataDeliver 总调度逻辑 (分析模式切换)
 │   ├── datadeliver.py       # 模块化文件定义库 (各模块产物定义)
 │   └── id_convert.py        # 样本表与对比表解析引擎
 └── config/
     └── config.yaml          # 流程控制核心配置文件
 ```
+
+## 📊 分析流程图
+
+```mermaid
+flowchart TD
+    Start([开始分析]) --> Config{检查配置}
+    
+    Config -->|only_qc=true| QC_ONLY[仅QC模式]
+    Config -->|only_qc=false| FULL[完整分析模式]
+    
+    QC_ONLY --> MD5[MD5校验]
+    QC_ONLY --> RAW_QC[原始数据QC]
+    QC_ONLY --> TRIM[数据修剪]
+    QC_ONLY --> MAPPING[序列比对]
+    QC_ONLY --> BAM_QC[BAM质控]
+    QC_ONLY --> Deliver_QC[数据交付]
+    
+    FULL --> MD5_FULL[MD5校验]
+    FULL --> RAW_QC_FULL[原始数据QC]
+    FULL --> TRIM_FULL[数据修剪]
+    FULL --> MAPPING_FULL[序列比对]
+    FULL --> BAM_QC_FULL[BAM质控]
+    
+    BAM_QC_FULL --> AnalysisType{分析类型}
+    
+    AnalysisType -->|germline| Germline[生殖细胞变异分析]
+    AnalysisType -->|somatic| Somatic{体细胞分析模式}
+    
+    Germline --> Callers{变异检测方法}
+    Callers -->|joint_call_variant| GATK_Joint[GATK Joint Calling]
+    Callers -->|gatk_single_call_variant| GATK_Single[GATK单样本]
+    Callers -->|bcftools_single_call_variant| Bcftools[Bcftools]
+    
+    Somatic -->|whether_paired_group=true| Somatic_Paired[Tumor-Normal配对]
+    Somatic -->|whether_paired_group=false| Somatic_Single[Tumor-only]
+    
+    GATK_Joint --> Filter{过滤方法}
+    GATK_Single --> Filter
+    Bcftools --> Filter
+    Somatic_Paired --> Somatic_Filter[Somatic过滤链]
+    Somatic_Single --> Somatic_Filter
+    
+    Filter -->|VQSR| VQSR_Filter[VQSR过滤]
+    Filter -->|HardFilter| Hard_Filter[硬过滤]
+    
+    VQSR_Filter --> Annotation[变异注释]
+    Hard_Filter --> Annotation
+    Somatic_Filter --> Annotation
+    
+    Annotation --> SV_Check{是否检测SV}
+    SV_Check -->|call_SV=true| Manta[Manta SV检测]
+    SV_Check -->|call_SV=false| Deliver
+    
+    Manta --> Deliver[数据交付]
+    Deliver_QC --> End([结束])
+    Deliver --> End
+    
+    style QC_ONLY fill:#e1f5ff
+    style FULL fill:#fff4e1
+    style Germline fill:#e8f5e9
+    style Somatic fill:#fce4ec
+```
+
+## ⚙️ 配置项说明
+
+| 配置项 | 类型 | 说明 | 可选值 |
+|--------|------|------|--------|
+| `only_qc` | boolean | 是否仅运行QC分析 | `true`/`false` |
+| `library_type` | string | 文库类型 **(WES暂未实现)** | `WGS`/`WES` |
+| `analysis_type` | string | 分析类型 | `germline`/`somatic` |
+| `whether_paired_group` | boolean | 是否配对分析（仅somatic） | `true`/`false` |
+| `germline_call_variant_type` | array | 生殖细胞变异检测方法 | `joint_call_variant`, `gatk_single_call_variant`, `bcftools_single_call_variant` |
+| `call_SV` | boolean | 是否检测结构变异 | `true`/`false` |
+
+## ⚠️ 注意事项与已知限制
+
+1. **模块互斥性检查缺失**：没有防止同时选择germline和somatic分析的机制
+2. **SV检测独立性**：SV检测独立于变异检测，可能导致逻辑混淆
+3. **WES分析暂未实现**：虽然配置文件中有`library_type`选项，但WES专用逻辑（如目标区域富集、覆盖度分析等）尚未开发，将在后续版本中推出
 
 ## 📋 快速开始
 
@@ -68,10 +150,17 @@ snakemake -s snakefile --use-conda --cores 32
 ```
 
 ## 🌟 下个版本规划 (Roadmap)
-- [ ] 增加 `DeepVariant` AI 调用模块。
-- [ ] 引入 `Manta` / `Lumpy` 结构变异 (SV) 检测。
-- [ ] 完善基于 Quarto 的变异检测可视化报告。
+
+### v0.1.0 - WES 分析功能
+- [ ] 实现 WES (全外显子组测序) 分析流程
+- [ ] 支持目标区域 BED 文件处理
+- [ ] 添加 WES 专用覆盖度统计分析
+- [ ] 实现靶标区域富集效率评估
+
+### 未来规划
+- [ ] 增加 `DeepVariant` AI 调用模块
+- [ ] 完善基于 Quarto 的变异检测可视化报告
 
 ---
 
-**DNAFlow** - *让每一组碱基序列都清晰可见。*
+**WGSFlow** - *让每一组碱基序列都清晰可见。*

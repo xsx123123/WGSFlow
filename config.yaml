@@ -57,4 +57,3 @@ germline_call_variant_type:
 
 # whether call SV (power by manta)
 call_SV: true
-whether_paired_group: false

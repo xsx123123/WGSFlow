@@ -1,7 +1,7 @@
-# RNAFlow Pipeline - Reference Genome Configuration
+# WGSFlow Pipeline - Reference Genome Configuration
 #
 # This file defines the paths to reference genome files and other reference databases
-# used by the RNA-seq analysis pipeline. It contains configuration for multiple
+# used by the WGS analysis pipeline. It contains configuration for multiple
 # supported organisms and genome versions.
 #
 # Key Configuration Sections:
@@ -24,7 +24,9 @@ reference_path : /data/jzhang/reference/WGSFlow_reference
 # List of genome versions that are officially supported by this pipeline configuration
 can_use_genome_version:
   - Lsat_Salinas_v11    # Lactuca sativa (Lettuce) Salinas v11
+  - Lsat_Salinas_v8     # Lactuca sativa (Lettuce) Salinas v11
   - hg38_p14            # human genome hg38.p14
+  - GRCm39              # mouse genome Release M38
   - GO                  # Gene Ontology database
 
 # Supported VSQE filter Genome Versions
@@ -44,13 +46,13 @@ bwa_mem:
       go_annotation: Lactuca_sativa_V11_ncbi/GCF_002870075.4-RS_2022_12_gene_ontology.go
       ref_all: Lactuca_sativa_V11_ncbi/Lsat_ref_all.txt
     hg38_p14:
-      index: Homo_sapiens_assembly38/bwa-mem_v11/Lsat_Salinas_v11
-      genome_fa: Homo_sapiens_assembly38/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.fna
-      genome_gtf: Homo_sapiens_assembly38/GCF_002870075.4_Lsat_Salinas_v11_genomic.nuclear_only.gtf
-      genome_gff: Homo_sapiens_assembly38/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.gff
-      bed12: Homo_sapiens_assembly38/Lsat_Salinas_v11.bed12
-      go_annotation: Homo_sapiens_assembly38/GCF_002870075.4-RS_2022_12_gene_ontology.go
-      ref_all: Homo_sapiens_assembly38/Lsat_ref_all.txt
+      index: Homo_sapiens_assembly38/bwa-mem_v11/hg38_p14
+      genome_fa: Homo_sapiens_assembly38/Homo_sapiens_assembly38.fasta
+      genome_gtf: Homo_sapiens_assembly38/Homo_sapiens_assembly38.refseq.gtf
+      genome_gff: Homo_sapiens_assembly38/Homo_sapiens_assembly38.refseq.gff
+      bed12: Homo_sapiens_assembly38/hg38_p14.bed12
+      go_annotation: Homo_sapiens_assembly38/hg38_p14_gene_ontology.go
+      ref_all: Homo_sapiens_assembly38/hg38_ref_all.txt
       omni: Homo_sapiens_assembly38/1000G_omni2.5.hg38.vcf.gz
       1000G_phase1: Homo_sapiens_assembly38/1000G_phase1.snps.high_confidence.hg38.vcf.gz
       hapmap: Homo_sapiens_assembly38/hapmap_3.3.hg38.vcf.gz
@@ -59,6 +61,7 @@ bwa_mem:
       pon: Homo_sapiens_assembly38/1000g_pon.hg38.vcf.gz
       germline: Homo_sapiens_assembly38/af-only-gnomad.hg38.vcf.gz
       common_variants_vcf: Homo_sapiens_assembly38/small_exac_common_3.hg38.vcf.gz
+    GRCm39:
     GO:
       obo: go_database/go-basic.obo
 
@@ -78,6 +81,8 @@ snpEff_name:
     name: Lactuca_sativa_V11
   Lsat_Salinas_v8: 
     name: Lactuca_sativa_V8
+  
+
 # ------------------------------------- #
 # ploidy setting for bcftools
 # ------------------------------------- #

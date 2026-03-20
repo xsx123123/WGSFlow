@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-RNAFlow Pipeline - Short Read Cleaning and Adapter Trimming Module
+WGSFlow Pipeline - Short Read Cleaning and Adapter Trimming Module
 
 This module performs comprehensive quality trimming and adapter removal from raw
 sequencing reads using Fastp, a fast and efficient preprocessing tool for NGS data.

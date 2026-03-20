@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-RNAFlow Pipeline - Raw Data Processing and MD5 Validation Module
+WGSFlow Pipeline - Raw Data Processing and MD5 Validation Module
 
 This module handles the initial processing of raw sequencing data by creating symbolic
 links to the original files and performing comprehensive MD5 checksum validation to
