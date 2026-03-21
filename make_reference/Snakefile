@@ -1,0 +1,225 @@
+# WGSFlow - Reference Genome Build Pipeline
+#
+# This Snakemake pipeline builds all required reference genome files
+# for use with the WGSFlow analysis pipeline.
+#
+# Usage:
+#   1. Edit config.yaml to define your reference genomes
+#   2. Run: snakemake -s Snakefile --use-conda --cores <num_cores>
+
+configfile: "config.yaml"
+
+# Import utility functions
+import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "rules", "utils"))
+
+# ------------------------------------- #
+# Helper Functions
+# ------------------------------------- #
+def get_genome_config(genome_id):
+    """Get configuration for a specific genome"""
+    return config["genomes"][genome_id]
+
+def get_output_root():
+    """Get output root directory"""
+    return config["output_root"]
+
+def get_genome_output_dir(genome_id):
+    """Get output directory for a specific genome"""
+    genome_config = get_genome_config(genome_id)
+    return os.path.join(get_output_root(), genome_config["species"], genome_config["genome_version"])
+
+def get_bwa_output_dir(genome_id):
+    """Get BWA index output directory"""
+    genome_config = get_genome_config(genome_id)
+    return os.path.join(get_output_root(), genome_config["species"], "bwa-mem_v11")
+
+# ------------------------------------- #
+# Target Rules
+# ------------------------------------- #
+rule all:
+    input:
+        expand(
+            [
+                # Basic reference files
+                "{output_dir}/{genome_id}.fasta",
+                "{output_dir}/{genome_id}.fasta.fai",
+                "{output_dir}/{genome_id}.dict",
+                # BWA index
+                "{bwa_dir}/{genome_id}.amb",
+                "{bwa_dir}/{genome_id}.ann",
+                "{bwa_dir}/{genome_id}.bwt",
+                "{bwa_dir}/{genome_id}.pac",
+                "{bwa_dir}/{genome_id}.sa",
+                # Annotation files
+                optional("{output_dir}/{genome_id}.gtf"),
+                optional("{output_dir}/{genome_id}.gff"),
+                optional("{output_dir}/{genome_id}.bed12"),
+            ],
+            output_dir=lambda wc: get_genome_output_dir(wc.genome_id),
+            bwa_dir=lambda wc: get_bwa_output_dir(wc.genome_id),
+            genome_id=config["genomes"].keys()
+        ) + expand(
+            # snpEff database (conditional)
+            optional("{snpeff_dir}/{db_name}/snpEff.config"),
+            snpeff_dir=config.get("snpeff_db_path", "../snpEff_database"),
+            db_name=lambda wc: (get_genome_config(wc.genome_id)["snpEff"]["db_name"] or 
+                                f"{get_genome_config(wc.genome_id)['species']}_{get_genome_config(wc.genome_id)['genome_version']}")
+                                if get_genome_config(wc.genome_id)["snpEff"]["build"] else [],
+            genome_id=[gid for gid, gcfg in config["genomes"].items() if gcfg["snpEff"]["build"]]
+        )
+
+# ------------------------------------- #
+# Rule 1: Prepare output directories
+# ------------------------------------- #
+rule create_directories:
+    output:
+        directory(temp("{output_dir}/.done")),
+        directory(temp("{bwa_dir}/.done"))
+    params:
+        output_dir=lambda wc: get_genome_output_dir(wc.genome_id),
+        bwa_dir=lambda wc: get_bwa_output_dir(wc.genome_id)
+    shell:
+        """
+        mkdir -p {params.output_dir}
+        mkdir -p {params.bwa_dir}
+        touch {params.output_dir}/.done
+        touch {params.bwa_dir}/.done
+        """
+
+# ------------------------------------- #
+# Rule 2: Copy and rename FASTA file
+# ------------------------------------- #
+rule copy_fasta:
+    input:
+        dir_done="{output_dir}/.done",
+        fasta=lambda wc: get_genome_config(wc.genome_id)["input"]["fasta"]
+    output:
+        fasta="{output_dir}/{genome_id}.fasta"
+    params:
+        output_dir=lambda wc: get_genome_output_dir(wc.genome_id)
+    shell:
+        """
+        cp {input.fasta} {output.fasta}
+        """
+
+# ------------------------------------- #
+# Rule 3: Create samtools faidx index
+# ------------------------------------- #
+rule samtools_faidx:
+    input:
+        "{output_dir}/{genome_id}.fasta"
+    output:
+        "{output_dir}/{genome_id}.fasta.fai"
+    conda:
+        "../envs/samtools.yaml"
+    threads:
+        config["build_options"]["threads"]
+    shell:
+        """
+        samtools faidx {input}
+        """
+
+# ------------------------------------- #
+# Rule 4: Create GATK sequence dictionary
+# ------------------------------------- #
+rule create_sequence_dict:
+    input:
+        fasta="{output_dir}/{genome_id}.fasta",
+        fai="{output_dir}/{genome_id}.fasta.fai"
+    output:
+        "{output_dir}/{genome_id}.dict"
+    conda:
+        "../envs/gatk4.yaml"
+    shell:
+        """
+        gatk CreateSequenceDictionary \
+            -R {input.fasta} \
+            -O {output}
+        """
+
+# ------------------------------------- #
+# Rule 5: Build BWA index
+# ------------------------------------- #
+rule build_bwa_index:
+    input:
+        dir_done="{bwa_dir}/.done",
+        fasta="{output_dir}/{genome_id}.fasta"
+    output:
+        "{bwa_dir}/{genome_id}.amb",
+        "{bwa_dir}/{genome_id}.ann",
+        "{bwa_dir}/{genome_id}.bwt",
+        "{bwa_dir}/{genome_id}.pac",
+        "{bwa_dir}/{genome_id}.sa"
+    params:
+        bwa_dir=lambda wc: get_bwa_output_dir(wc.genome_id),
+        output_dir=lambda wc: get_genome_output_dir(wc.genome_id)
+    conda:
+        "../envs/bwa.yaml"
+    threads:
+        config["build_options"]["threads"]
+    shell:
+        """
+        cd {params.bwa_dir}
+        ln -sf ../../{params.output_dir}/{wildcards.genome_id}.fasta {wildcards.genome_id}.fasta
+        bwa index -p {wildcards.genome_id} {wildcards.genome_id}.fasta
+        """
+
+# ------------------------------------- #
+# Rule 6: Copy and rename GTF file
+# ------------------------------------- #
+rule copy_gtf:
+    input:
+        dir_done="{output_dir}/.done",
+        gtf=lambda wc: get_genome_config(wc.genome_id)["input"]["gtf"]
+    output:
+        "{output_dir}/{genome_id}.gtf"
+    params:
+        output_dir=lambda wc: get_genome_output_dir(wc.genome_id)
+    run:
+        if input.gtf is not None and os.path.exists(str(input.gtf)):
+            shell("cp {input.gtf} {output}")
+        else:
+            shell("touch {output}")
+
+# ------------------------------------- #
+# Rule 7: Copy and rename GFF file
+# ------------------------------------- #
+rule copy_gff:
+    input:
+        dir_done="{output_dir}/.done",
+        gff=lambda wc: get_genome_config(wc.genome_id)["input"]["gff"]
+    output:
+        "{output_dir}/{genome_id}.gff"
+    params:
+        output_dir=lambda wc: get_genome_output_dir(wc.genome_id)
+    run:
+        if input.gff is not None and os.path.exists(str(input.gff)):
+            shell("cp {input.gff} {output}")
+        else:
+            shell("touch {output}")
+
+# ------------------------------------- #
+# Rule 8: Generate or copy BED12 file
+# ------------------------------------- #
+rule copy_or_generate_bed12:
+    input:
+        dir_done="{output_dir}/.done",
+        gtf=lambda wc: get_genome_config(wc.genome_id)["input"]["gtf"],
+        bed12_input=lambda wc: get_genome_config(wc.genome_id)["input"]["bed12"]
+    output:
+        "{output_dir}/{genome_id}.bed12"
+    params:
+        output_dir=lambda wc: get_genome_output_dir(wc.genome_id),
+        generate_bed12=config["build_options"]["generate_bed12"]
+    run:
+        if input.bed12_input is not None and os.path.exists(str(input.bed12_input)):
+            shell("cp {input.bed12_input} {output}")
+        elif params.generate_bed12 and input.gtf is not None and os.path.exists(str(input.gtf)):
+            shell("""
+                echo "BED12 generation from GTF not implemented yet"
+                touch {output}
+            """)
+        else:
+            shell("touch {output}")

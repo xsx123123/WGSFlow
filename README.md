@@ -4,20 +4,24 @@
 
 > ⚠️ **注意**：当前版本 (v0.0.1) 仅支持 **WGS (全基因组测序)** 分析。WES (全外显子组测序) 分析流程正在规划中，将在后续大版本中推出。
 
-## 🚀 今日更新摘要 (2026-03-05)
+## 🚀 更新摘要
 
-### 1. 变异检测模块化重构 (Germline Variant Calling)
+### 2026-03-22 更新
+- **参考基因组构建模块**：新增 `make_reference/` 模块，支持自动化构建与 WGSFlow 兼容的参考基因组文件，包括 BWA 索引、序列字典等，并可自动生成配置片段。
+
+### 2026-03-05 更新
+#### 1. 变异检测模块化重构 (Germline Variant Calling)
 - **多引擎支持**：支持通过 `config.yaml` 动态切换 Bcftools、GATK Single-Sample (GVCF 模式) 和 GATK Joint-Calling。
 - **动态过滤算法**：为 Bcftools 引入了基于样本量的动态 DP 阈值（`num_samples * 5`）及 MAF/Missingness 自动切换逻辑。
 
-### 2. Somatic（体细胞）分析链条全线贯通
+#### 2. Somatic（体细胞）分析链条全线贯通
 - **Mutect2 配对分析**：实现了从 `Tumor-Normal` 配对调用到多重过滤（Orientation Bias, Contamination, Segmentation）的完整闭环。
 - **自动化交付集成**：**[NEW]** Somatic 模块已正式接入 `DataDeliver` 调度系统。流程会自动解析 `contrasts.csv` 中的配对关系，并自动生成以下核心交付物：
     - `04.filter_variant/somatic/{contrast}.somatic_filtered.vcf.gz` (最终高置信突变集)
     - `04.filter_variant/somatic/{contrast}.somatic_filtered.annotation.csv/html` (SnpEff 功能注释)
     - `03.call_variant/somatic/{contrast}.contamination.table` (交叉污染度评估报告)
 
-### 3. 工程架构优化 (Workflow Management)
+#### 3. 工程架构优化 (Workflow Management)
 - **DataDeliver 调度系统**：采用“模块化定义 + 动态拼接”模式，彻底解耦文件路径定义（`datadeliver.py`）与逻辑调度（`common.py`）。
 - **自动化路径映射**：`id_convert.py` 现在支持自动构建 BWA-MEM 规范路径，并精准匹配瘤旁配对样本。
 - **规范化监控**：所有规则均对齐了 `06.mapping.smk` 标准格式，包含 `message`、`benchmark` 及 `resources` 资源隔离。
@@ -36,9 +40,40 @@ WGSFlow/
 │   ├── common.py            # DataDeliver 总调度逻辑 (分析模式切换)
 │   ├── datadeliver.py       # 模块化文件定义库 (各模块产物定义)
 │   └── id_convert.py        # 样本表与对比表解析引擎
+├── make_reference/           # [NEW] 参考基因组构建模块
+│   ├── Snakefile            # 参考基因组构建流程
+│   ├── config.yaml          # 参考基因组配置模板
+│   └── generate_reference_config.py  # 自动生成配置脚本
 └── config/
     └── config.yaml          # 流程控制核心配置文件
 ```
+
+## 🧬 构建参考基因组
+
+WGSFlow 提供了 `make_reference/` 模块，用于自动化构建与流程兼容的参考基因组文件。
+
+### 功能特性
+- 自动构建 BWA-MEM 索引
+- 生成 samtools faidx 索引和 GATK 序列字典
+- 标准化注释文件结构
+- 自动生成 WGSFlow 配置片段
+
+### 快速使用
+```bash
+cd make_reference
+
+# 1. 配置参考基因组
+cp config.yaml my_config.yaml
+# 编辑 my_config.yaml，填写你的 FASTA、GTF 等文件路径
+
+# 2. 构建参考基因组
+snakemake -s Snakefile --configfile my_config.yaml --use-conda --cores 32
+
+# 3. 生成 WGSFlow 配置
+python generate_reference_config.py -i /path/to/output -g hg38_p14
+```
+
+详细说明请参考 [make_reference/README.md](make_reference/README.md)。
 
 ## 📊 分析流程图
 

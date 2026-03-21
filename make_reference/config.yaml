@@ -1,0 +1,110 @@
+# WGSFlow - Reference Genome Build Configuration
+#
+# This file defines the reference genomes to be built for use with WGSFlow.
+# Configure your input files and output settings here.
+
+# ------------------------------------- #
+# Output Configuration
+# ------------------------------------- #
+# Root directory where all built reference files will be stored
+output_root: "/data/jzhang/reference/WGSFlow_reference"
+
+# ------------------------------------- #
+# Reference Genome Definitions
+# ------------------------------------- #
+# Define each reference genome you want to build
+genomes:
+  # Example: Human hg38
+  hg38_p14:
+    # Basic information
+    species: "Homo_sapiens"
+    genome_version: "hg38_p14"
+    ploidy: 2
+    
+    # Input files (provide paths to your source files)
+    input:
+      # Required: Genome FASTA file
+      fasta: "/path/to/Homo_sapiens_assembly38.fasta"
+      
+      # Required for annotation: GTF or GFF file (provide at least one)
+      gtf: "/path/to/Homo_sapiens_assembly38.refseq.gtf"
+      gff: "/path/to/Homo_sapiens_assembly38.refseq.gff"
+      
+      # Optional: BED12 file (will be generated from GTF if not provided)
+      bed12: null
+      
+      # Optional: Gene Ontology annotation file
+      go_annotation: null
+      
+      # Optional: Reference gene list
+      ref_all: null
+      
+      # Optional: VQSR resources (for human only)
+      vqsr_resources:
+        omni: "/path/to/1000G_omni2.5.hg38.vcf.gz"
+        1000G_phase1: "/path/to/1000G_phase1.snps.high_confidence.hg38.vcf.gz"
+        hapmap: "/path/to/hapmap_3.3.hg38.vcf.gz"
+        dbsnp138: "/path/to/Homo_sapiens_assembly38.dbsnp138.vcf"
+        Mills: "/path/to/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
+      
+      # Optional: Somatic resources (for human only)
+      somatic_resources:
+        pon: "/path/to/1000g_pon.hg38.vcf.gz"
+        germline: "/path/to/af-only-gnomad.hg38.vcf.gz"
+        common_variants_vcf: "/path/to/small_exac_common_3.hg38.vcf.gz"
+    
+    # snpEff configuration
+    snpEff:
+      # Set to true to build snpEff database
+      build: true
+      # snpEff database name (leave empty to auto-generate)
+      db_name: ""
+      # snpEff config file (leave empty to use default)
+      config: ""
+  
+  # Example: Lettuce (Lactuca sativa)
+  Lsat_Salinas_v11:
+    species: "Lactuca_sativa"
+    genome_version: "Lsat_Salinas_v11"
+    ploidy: 2
+    
+    input:
+      fasta: "/path/to/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.fna"
+      gtf: "/path/to/GCF_002870075.4_Lsat_Salinas_v11_genomic.nuclear_only.gtf"
+      gff: "/path/to/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.gff"
+      bed12: "/path/to/Lsat_Salinas_v11.bed12"
+      go_annotation: "/path/to/GCF_002870075.4-RS_2022_12_gene_ontology.go"
+      ref_all: "/path/to/Lsat_ref_all.txt"
+      vqsr_resources: null
+      somatic_resources: null
+    
+    snpEff:
+      build: true
+      db_name: "Lactuca_sativa_V11"
+      config: ""
+
+# ------------------------------------- #
+# Build Options
+# ------------------------------------- #
+build_options:
+  # Number of threads to use for parallel tasks
+  threads: 16
+  
+  # Whether to create sequence dictionary (required for GATK)
+  create_dict: true
+  
+  # Whether to build BWA index
+  build_bwa: true
+  
+  # Whether to build samtools faidx index
+  build_faidx: true
+  
+  # Whether to generate BED12 from GTF (if bed12 not provided)
+  generate_bed12: true
+  
+  # Compression options
+  compression:
+    # Whether to compress VCF files with bgzip
+    bgzip_vcf: true
+    # Whether to index compressed VCF files with tabix
+    tabix_vcf: true
