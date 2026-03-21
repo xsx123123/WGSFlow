@@ -49,57 +49,103 @@ flowchart TD
     Config -->|only_qc=true| QC_ONLY[仅QC模式]
     Config -->|only_qc=false| FULL[完整分析模式]
     
-    QC_ONLY --> MD5[MD5校验]
-    QC_ONLY --> RAW_QC[原始数据QC]
-    QC_ONLY --> TRIM[数据修剪]
-    QC_ONLY --> MAPPING[序列比对]
-    QC_ONLY --> BAM_QC[BAM质控]
-    QC_ONLY --> Deliver_QC[数据交付]
+    %% 仅QC模式流程
+    subgraph QC_Only_Pipeline [仅QC分析流程]
+        direction TB
+        MD5[MD5校验\n02.file_convert_md5.smk] --> RAW_QC[原始数据QC\nFastQC + FastQ Screen\n03.short_read_qc.smk]
+        RAW_QC --> CONTAM[污染检查\n04.Contamination_check.smk]
+        CONTAM --> TRIM[数据修剪\nFastp\n05.short_read_clean.smk]
+        TRIM --> MAPPING[序列比对\nBWA-MEM\n06.mapping.smk]
+        MAPPING --> SORT[排序索引\nSamtools]
+        SORT --> MARKDUP[标记重复\nSambamba]
+        MARKDUP --> CRAM[CRAM压缩]
+        CRAM --> BAM_QC[BAM质控\nMosdepth + Qualimap + MultiQC]
+    end
     
-    FULL --> MD5_FULL[MD5校验]
-    FULL --> RAW_QC_FULL[原始数据QC]
-    FULL --> TRIM_FULL[数据修剪]
-    FULL --> MAPPING_FULL[序列比对]
-    FULL --> BAM_QC_FULL[BAM质控]
+    %% 完整分析模式流程
+    subgraph Full_Pipeline [完整分析流程]
+        direction TB
+        MD5_FULL[MD5校验\n02.file_convert_md5.smk] --> RAW_QC_FULL[原始数据QC\nFastQC + FastQ Screen\n03.short_read_qc.smk]
+        RAW_QC_FULL --> CONTAM_FULL[污染检查\n04.Contamination_check.smk]
+        CONTAM_FULL --> TRIM_FULL[数据修剪\nFastp\n05.short_read_clean.smk]
+        TRIM_FULL --> MAPPING_FULL[序列比对\nBWA-MEM\n06.mapping.smk]
+        MAPPING_FULL --> SORT_FULL[排序索引\nSamtools]
+        SORT_FULL --> MARKDUP_FULL[标记重复\nSambamba]
+        MARKDUP_FULL --> CRAM_FULL[CRAM压缩]
+        CRAM_FULL --> BAM_QC_FULL[BAM质控\nMosdepth + Qualimap + MultiQC]
+    end
+    
+    QC_ONLY --> QC_Only_Pipeline
+    FULL --> Full_Pipeline
     
     BAM_QC_FULL --> AnalysisType{分析类型}
     
-    AnalysisType -->|germline| Germline[生殖细胞变异分析]
-    AnalysisType -->|somatic| Somatic{体细胞分析模式}
+    %% Germline变异分析
+    subgraph Germline_Pipeline [Germline变异分析]
+        direction TB
+        Germline_Start([Germline分析]) --> Callers{变异检测方法}
+        
+        Callers -->|joint_call_variant| GATK_Joint[GATK Joint Calling\nHaplotypeCaller +\nGenomicsDB + GenotypeGVCFs]
+        Callers -->|gatk_single_call_variant| GATK_Single[GATK单样本\nHaplotypeCaller GVCF模式]
+        Callers -->|bcftools_single_call_variant| Bcftools[Bcftools\nmpileup + call]
+        
+        GATK_Joint --> Filter{过滤方法}
+        GATK_Single --> Filter
+        Bcftools --> Filter
+        
+        Filter -->|VQSR| VQSR_Filter[VQSR过滤\nSNP + INDEL]
+        Filter -->|HardFilter| Hard_Filter[硬过滤\nGATK HardFiltering]
+    end
     
-    Germline --> Callers{变异检测方法}
-    Callers -->|joint_call_variant| GATK_Joint[GATK Joint Calling]
-    Callers -->|gatk_single_call_variant| GATK_Single[GATK单样本]
-    Callers -->|bcftools_single_call_variant| Bcftools[Bcftools]
+    %% Somatic变异分析
+    subgraph Somatic_Pipeline [Somatic变异分析]
+        direction TB
+        Somatic_Start([Somatic分析]) --> Somatic_Mode{分析模式}
+        
+        Somatic_Mode -->|whether_paired_group=true| Somatic_Paired[Tumor-Normal配对\nMutect2]
+        Somatic_Mode -->|whether_paired_group=false| Somatic_Single[Tumor-only\nMutect2]
+        
+        Somatic_Paired --> LearnReadOrientation[读序偏向性建模\nLearnReadOrientationModel]
+        Somatic_Single --> LearnReadOrientation
+        
+        LearnReadOrientation --> ContaminationEst[污染度评估\nCalculateContamination]
+        ContaminationEst --> FilterMutectCalls[突变过滤\nFilterMutectCalls]
+        FilterMutectCalls --> Somatic_Filter[Somatic完整过滤链\nOrientation Bias +\nContamination + Segmentation]
+    end
     
-    Somatic -->|whether_paired_group=true| Somatic_Paired[Tumor-Normal配对]
-    Somatic -->|whether_paired_group=false| Somatic_Single[Tumor-only]
+    AnalysisType -->|germline| Germline_Pipeline
+    AnalysisType -->|somatic| Somatic_Pipeline
     
-    GATK_Joint --> Filter{过滤方法}
-    GATK_Single --> Filter
-    Bcftools --> Filter
-    Somatic_Paired --> Somatic_Filter[Somatic过滤链]
-    Somatic_Single --> Somatic_Filter
-    
-    Filter -->|VQSR| VQSR_Filter[VQSR过滤]
-    Filter -->|HardFilter| Hard_Filter[硬过滤]
-    
-    VQSR_Filter --> Annotation[变异注释]
+    VQSR_Filter --> Annotation[变异注释\nSnpEff]
     Hard_Filter --> Annotation
     Somatic_Filter --> Annotation
     
     Annotation --> SV_Check{是否检测SV}
-    SV_Check -->|call_SV=true| Manta[Manta SV检测]
+    
+    %% SV检测
+    subgraph SV_Pipeline [结构变异检测]
+        Manta_SV[Manta SV检测\n08.SV.smk]
+    end
+    
+    SV_Check -->|call_SV=true| SV_Pipeline
     SV_Check -->|call_SV=false| Deliver
     
-    Manta --> Deliver[数据交付]
-    Deliver_QC --> End([结束])
-    Deliver --> End
+    Manta_SV --> Deliver[数据交付\n09.deliver.smk]
+    BAM_QC --> Deliver_QC[数据交付\n09.deliver.smk]
     
+    Deliver_QC --> Report[报告生成\n10.Report.smk]
+    Deliver --> Report
+    
+    Report --> End([结束])
+    
+    %% 样式定义
     style QC_ONLY fill:#e1f5ff
     style FULL fill:#fff4e1
-    style Germline fill:#e8f5e9
-    style Somatic fill:#fce4ec
+    style Germline_Pipeline fill:#e8f5e9
+    style Somatic_Pipeline fill:#fce4ec
+    style SV_Pipeline fill:#f3e5f5
+    style QC_Only_Pipeline fill:#e3f2fd
+    style Full_Pipeline fill:#fff3e0
 ```
 
 ## ⚙️ 配置项说明
