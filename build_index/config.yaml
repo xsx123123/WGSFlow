@@ -1,0 +1,14 @@
+# Genome information #
+genome_version_info:
+  genome_name:
+  genome_description:
+  genome_version:
+  genome_assembly:
+    genome_fa:
+  genome_annotation:
+    genome_gtf:
+    genome_gff:
+    genome_gff:
+# building index parameter #
+reference_path : /data/jzhang/reference/WGSFlow_reference
+

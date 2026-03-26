@@ -47,13 +47,13 @@ bwa_mem:
       go_annotation: Lactuca_sativa_V11_ncbi/GCF_002870075.4-RS_2022_12_gene_ontology.go
       ref_all: Lactuca_sativa_V11_ncbi/Lsat_ref_all.txt
     Lsat_Salinas_v11_wx:
-      index: Lsat_Salinas_v11/bwa-mem_v11/Lsat_Salinas_v11
-      genome_fa: Lactuca_sativa_V11_ncbi/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.fna
-      genome_gtf: Lactuca_sativa_V11_ncbi/GCF_002870075.4_Lsat_Salinas_v11_genomic.nuclear_only.gtf
-      genome_gff: Lactuca_sativa_V11_ncbi/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.gff
-      bed12: Lactuca_sativa_V11_ncbi/Lsat_Salinas_v11.bed12
-      go_annotation: Lactuca_sativa_V11_ncbi/GCF_002870075.4-RS_2022_12_gene_ontology.go
-      ref_all: Lactuca_sativa_V11_ncbi/Lsat_ref_all.txt
+      index: Lsat_Salinas_v11_wx/Lsat_Salinas_v11_wx/Lsat_Salinas_v11_bwa
+      genome_fa: Lsat_Salinas_v11_wx/Lsat_Salinas_v11.genome.fasta
+      genome_gtf: Lsat_Salinas_v11_wx/Lsat_Salinas_v11.genome.gtf
+      genome_gff: Lsat_Salinas_v11_wx/Lsat_Salinas_v11.genome.gff
+      bed12: Lsat_Salinas_v11_wx/Lsat_Salinas_v11.genome.bed12
+      go_annotation: Lsat_Salinas_v11_wx/GCF_002870075.4-RS_2022_12_gene_ontology.go
+      ref_all: Lsat_Salinas_v11_wx/Lsat_Salinas_v11.genome.wx_all.txt
     hg38_p14:
       index: Homo_sapiens_assembly38/bwa-mem_v11/hg38_p14
       genome_fa: Homo_sapiens_assembly38/Homo_sapiens_assembly38.fasta
