@@ -34,23 +34,26 @@ def resolve_reference_paths(config, targets, base_path=None):
 
     # logger.info(f"正在批量更新参考基因组路径: {genome_list} (Base: {root_dir})")
 
-    star_index_config = config.get("STAR_index", {})
+    # 支持多个配置节：STAR_index 和 bwa_mem
+    for config_section in ["STAR_index", "bwa_mem"]:
+        index_config = config.get(config_section, {})
 
-    for version in genome_list:
-        ref_dict = star_index_config.get(version)
+        for version in genome_list:
+            ref_dict = index_config.get(version)
 
-        if not ref_dict:
-            logger.warning(f"{version} 未在 bwa_mem index 中定义，跳过。")
-            continue
+            if not ref_dict:
+                if config_section == "bwa_mem":  # 只在 bwa_mem 时打印警告
+                    logger.warning(f"{version} 未在 {config_section} 中定义，跳过。")
+                continue
 
-        count = 0
-        for key, value in ref_dict.items():
-            if isinstance(value, str):
-                if not value.startswith(root_dir) and not value.startswith("/"):
-                    full_path = os.path.join(root_dir, value)
-                    ref_dict[key] = full_path
-                    count += 1
+            count = 0
+            for key, value in ref_dict.items():
+                if isinstance(value, str):
+                    if not value.startswith(root_dir) and not value.startswith("/"):
+                        full_path = os.path.join(root_dir, value)
+                        ref_dict[key] = full_path
+                        count += 1
 
-        if count > 0:
-            # logger.success(f"[{version}] 成功更新了 {count} 个文件路径")
-            pass
+            if count > 0:
+                # logger.success(f"[{version}] 成功更新了 {count} 个文件路径")
+                pass

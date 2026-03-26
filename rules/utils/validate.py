@@ -13,12 +13,25 @@ from rich import box
 from rich.align import Align
 from rich.padding import Padding
 
+def _check_bwa_index_exists(prefix):
+    """
+    Check if BWA index files exist for the given prefix.
+    BWA index uses common extensions: .amb, .ann, .bwt, .pac, .sa
+    """
+    bwa_extensions = [".amb", ".ann", ".bwt", ".pac", ".sa"]
+    for ext in bwa_extensions:
+        if os.path.exists(prefix + ext):
+            return True
+    return False
+
+
 def check_reference_paths(ref_dict):
     """
     Rich-styled (modern minimalist): Check reference genome file paths.
+    Handles BWA index specially (checks for any index file with the given prefix).
     """
     console = Console()
-    
+
     if not ref_dict:
         # Warning can also be a bit more modern
         msg = Text("⚠ Warning: Reference dictionary is empty!", style="bold yellow")
@@ -34,8 +47,16 @@ def check_reference_paths(ref_dict):
             if not isinstance(params, dict):
                 continue
             for key, path in params.items():
-                if key in keys_to_check and path and not os.path.exists(path):
-                    missing_entries.append((genome_name, key, path))
+                if key in keys_to_check and path:
+                    # Special handling for BWA index
+                    if key == "index":
+                        # Check if path exists as-is, or if any BWA index file exists with this prefix
+                        if not os.path.exists(path) and not _check_bwa_index_exists(path):
+                            missing_entries.append((genome_name, key, path))
+                    else:
+                        # Normal file/directory check for other keys
+                        if not os.path.exists(path):
+                            missing_entries.append((genome_name, key, path))
 
     if missing_entries:
         # --- 1. Top title ---
@@ -55,7 +76,7 @@ def check_reference_paths(ref_dict):
             pad_edge=False,
             row_styles=["none", "dim"] # Alternate rows dimmed for hierarchy
         )
-        
+
         # Define columns (all text centered)
         table.add_column("Genome Version", style="bold cyan", justify="center", width=20)
         table.add_column("Missing Key", style="yellow", justify="center", width=20)
@@ -74,7 +95,7 @@ def check_reference_paths(ref_dict):
         console.print(Align.center("[grey50]Please verify the paths in [bold]config.yaml[/] and try again.[/]"))
         console.rule(style="red")
         console.print()
-        
+
         sys.exit(1)
     else:
         # Success message: concise and powerful

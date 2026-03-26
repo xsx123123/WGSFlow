@@ -1,0 +1,6 @@
+2026-03-26 20:57:31 | INFO     | snakemake_logger_plugin_rich_loguru.utils:setup_analysis_logging:73 | [bold green]Analysis Script Initialized[/bold green]
+2026-03-26 20:57:31 | INFO     | snakemake_logger_plugin_rich_loguru.utils:setup_analysis_logging:74 | Log file: logs/analysis_2026-03-26_20-57-31.log
+2026-03-26 20:57:31 | INFO     | rules.utils.validate:validate_genome_version:191 | Genome version verified: 'Lsat_Salinas_v11_wx' is supported.
+2026-03-26 20:57:31 | INFO     | snakemake.workflow:<module>:59 | Redirect workspaces to /data/jzhang/project/WGS_Epistasis_2026_3_26/01.workflow
+2026-03-26 20:57:31 | INFO     | snakemake.workflow:<module>:69 | No contrasts needed for tumor-only somatic analysis
+2026-03-26 20:57:31 | DEBUG    | rules.utils.resource_manager:rule_resource:61 | Running locally. Stripping queue params for 'high_resource'.

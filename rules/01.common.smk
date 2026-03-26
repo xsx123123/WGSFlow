@@ -45,6 +45,5 @@ from rules.utils.common import (
     get_sample_data_dir,
     get_all_input_dirs,
     judge_bwa_index,
-    judge_star_index,
     check_gene_version,
 )

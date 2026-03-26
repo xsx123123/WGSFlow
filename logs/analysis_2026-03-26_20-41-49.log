@@ -1,0 +1,2 @@
+2026-03-26 20:41:49 | INFO     | snakemake_logger_plugin_rich_loguru.utils:setup_analysis_logging:73 | [bold green]Analysis Script Initialized[/bold green]
+2026-03-26 20:41:49 | INFO     | snakemake_logger_plugin_rich_loguru.utils:setup_analysis_logging:74 | Log file: logs/analysis_2026-03-26_20-41-49.log

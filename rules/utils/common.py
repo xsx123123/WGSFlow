@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Dict, Union, List, Callable
 from rich import print as rich_print
 
-from datadeliver import (
+from utils.datadeliver import (
     qc_clean,
     mapping,
     bcftools_call_variant,
