@@ -24,6 +24,7 @@ reference_path : /data/jzhang/reference/WGSFlow_reference
 # List of genome versions that are officially supported by this pipeline configuration
 can_use_genome_version:
   - Lsat_Salinas_v11    # Lactuca sativa (Lettuce) Salinas v11
+  - Lsat_Salinas_v11_wx # Lactuca sativa (Lettuce) Salinas v11
   - Lsat_Salinas_v8     # Lactuca sativa (Lettuce) Salinas v11
   - hg38_p14            # human genome hg38.p14
   - GRCm39              # mouse genome Release M38
@@ -38,6 +39,14 @@ join_calling_VSQR_filter:
 # Each entry should contain all required reference files for the pipeline modules
 bwa_mem:
     Lsat_Salinas_v11:
+      index: Lsat_Salinas_v11/bwa-mem_v11/Lsat_Salinas_v11
+      genome_fa: Lactuca_sativa_V11_ncbi/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.fna
+      genome_gtf: Lactuca_sativa_V11_ncbi/GCF_002870075.4_Lsat_Salinas_v11_genomic.nuclear_only.gtf
+      genome_gff: Lactuca_sativa_V11_ncbi/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.gff
+      bed12: Lactuca_sativa_V11_ncbi/Lsat_Salinas_v11.bed12
+      go_annotation: Lactuca_sativa_V11_ncbi/GCF_002870075.4-RS_2022_12_gene_ontology.go
+      ref_all: Lactuca_sativa_V11_ncbi/Lsat_ref_all.txt
+    Lsat_Salinas_v11_wx:
       index: Lsat_Salinas_v11/bwa-mem_v11/Lsat_Salinas_v11
       genome_fa: Lactuca_sativa_V11_ncbi/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.fna
       genome_gtf: Lactuca_sativa_V11_ncbi/GCF_002870075.4_Lsat_Salinas_v11_genomic.nuclear_only.gtf
@@ -79,6 +88,8 @@ snpEff_db_path: /data/jzhang/reference/snpEff_database
 snpEff_name:
   Lsat_Salinas_v11: 
     name: Lactuca_sativa_V11
+  Lsat_Salinas_v11_wx:
+    name: Lactuca_sativa_V11_wx
   Lsat_Salinas_v8: 
     name: Lactuca_sativa_V8
   
@@ -89,6 +100,8 @@ snpEff_name:
 ploidy_setting:
   Lsat_Salinas_v11:
     ploidy: 2  # genome ploidy
+  Lsat_Salinas_v11_wx:
+    ploidy: 2 
   Lsat_Salinas_v8:     
     ploidy: 2
   ITAG4.1:
