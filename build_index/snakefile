@@ -1,31 +1,47 @@
 #!/usr/bin/env python3
 # *---utf-8---*
 
-import sys
 import os
-from snakemake.utils import min_version, validate
+from snakemake.utils import min_version
 
 # Lock Snakemake Version
-min_version("9.9.0")
+min_version("8.0")
 
 # --------- 1. Config Loading --------- #
 # Load default configs
 configfile: "config.yaml"
 
-# get new refence path
-new_genome_path = os.path.join(config["reference_path"],f"{config["genome_version_info"]["genome_name"]}")
-new_genome_name = f"{config["genome_version_info"]["genome_name"]}"
+# 路径预定义
+species = config["genome_version_info"]["species"]
+genome_name = config["genome_version_info"]["genome_name"]
+genome_dir = os.path.join(config["reference_path"], species, genome_name)
+bwa_dir = os.path.join(config["reference_path"], species, "bwa-mem_v11")
+
 # --------- 4. Rules Import --------- #
 include: 'rules/building_index.smk'
+
 # --------- 5. Target Rule --------- #
 rule all:
     input:
-        os.path.join(new_genome_path,new_genome_name,f"{new_genome_name}.bwa_index.amb"),
-        os.path.join(new_genome_path,new_genome_name,f"{new_genome_name}.bwa_index.ann"),
-        os.path.join(new_genome_path,new_genome_name,f"{new_genome_name}.bwa_index.bwt"),
-        os.path.join(new_genome_path,new_genome_name,f"{new_genome_name}.bwa_index.pac"),
-        os.path.join(new_genome_path,new_genome_name,f"{new_genome_name}.gtf"),
-        os.path.join(new_genome_path,new_genome_name,f"{new_genome_name}.gff"),
-        os.path.join(new_genome_path,new_genome_name,f"{new_genome_name}.go"),
-        os.path.join(new_genome_path,new_genome_name,f"{new_genome_name}.gtf.bed12"),
-        os.path.join(new_genome_path,new_genome_name,f"{new_genome_name}.all.txt"),
+        os.path.join(genome_dir, f"{genome_name}.fasta.fai"),
+        os.path.join(genome_dir, f"{genome_name}.dict"),
+        os.path.join(genome_dir, f"{genome_name}.gtf"),
+        os.path.join(genome_dir, f"{genome_name}.gff"),
+        os.path.join(genome_dir, f"{genome_name}.go"),
+        os.path.join(genome_dir, f"{genome_name}.bed12"),
+        os.path.join(genome_dir, f"{genome_name}.ref_all.txt"),
+        os.path.join(bwa_dir, f"{genome_name}.sa"),
+        os.path.join(genome_dir, f"{genome_name}.reference_config.yaml")
+
+onsuccess:
+    config_file = os.path.join(genome_dir, f"{genome_name}.reference_config.yaml")
+    print("\n" + "="*60)
+    print("构建索引任务成功完成！")
+    print(f"生成的配置信息已保存至: {config_file}")
+    print("\n请将该文件中的内容手动复制到分析流程的 config/reference.yaml 文件中的 'bwa_mem:' 部分。")
+    print("="*60 + "\n")
+
+onerror:
+    print("\n" + "!"*60)
+    print("构建过程中出现错误，请检查日志文件。")
+    print("!"*60 + "\n")

@@ -36,42 +36,43 @@ WGSFlow/
 │   ├── 07.somatic.smk       # Somatic 流程 (Mutect2 完整过滤链)
 │   ├── 08.SV.smk            # 结构变异检测 (Manta)
 │   └── sub_rules/           # 具体算法实现模块 (VQSR, HardFilter 等)
+├── build_index/             # [NEW] 自动化索引构建流程 (Snakemake)
+│   ├── snakefile            # 索引构建主流程
+│   ├── config.yaml          # 索引构建配置
+│   └── rules/               # 核心构建规则 (BWA, Samtools, GATK, UCSC)
 ├── rules/utils/
 │   ├── common.py            # DataDeliver 总调度逻辑 (分析模式切换)
 │   ├── datadeliver.py       # 模块化文件定义库 (各模块产物定义)
 │   └── id_convert.py        # 样本表与对比表解析引擎
-├── make_reference/           # [NEW] 参考基因组构建模块
-│   ├── Snakefile            # 参考基因组构建流程
-│   ├── config.yaml          # 参考基因组配置模板
-│   └── generate_reference_config.py  # 自动生成配置脚本
+├── make_reference/           # 参考基因组辅助工具 (Python/Legacy)
 └── config/
     └── config.yaml          # 流程控制核心配置文件
 ```
 
 ## 🧬 构建参考基因组
 
-WGSFlow 提供了 `make_reference/` 模块，用于自动化构建与流程兼容的参考基因组文件。
+WGSFlow 提供了 `build_index/` 模块（推荐），这是一个全自动化的 Snakemake 流程，用于构建与 WGSFlow 分析流程完全兼容的参考基因组环境。
 
 ### 功能特性
-- 自动构建 BWA-MEM 索引
-- 生成 samtools faidx 索引和 GATK 序列字典
-- 标准化注释文件结构
-- 自动生成 WGSFlow 配置片段
+- **全自动化**：一键生成 BWA 索引、faidx 索引、GATK 字典、BED12 及 ref_all 注释。
+- **标准化目录**：自动创建按 `物种/基因组版本` 分层的标准存储结构。
+- **配置直出**：任务结束自动生成 YAML 配置片段，直接复制即可使用。
 
 ### 快速使用
 ```bash
-cd make_reference
+cd build_index
 
-# 1. 配置参考基因组
-cp config.yaml my_config.yaml
-# 编辑 my_config.yaml，填写你的 FASTA、GTF 等文件路径
+# 1. 配置参考基因组信息
+# 编辑 config.yaml，填写原始 FASTA、GTF 路径及物种名等
+vim config.yaml
 
-# 2. 构建参考基因组
-snakemake -s Snakefile --configfile my_config.yaml --use-conda --cores 32
+# 2. 运行构建流程
+snakemake --use-conda --cores 32
 
-# 3. 生成 WGSFlow 配置
-python generate_reference_config.py -i /path/to/output -g hg38_p14
+# 3. 获取配置
+# 查看终端输出或 genome_dir 下的 *.reference_config.yaml
 ```
+
 
 详细说明请参考 [make_reference/README.md](make_reference/README.md)。
 

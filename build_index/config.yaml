@@ -1,14 +1,16 @@
 # Genome information #
 genome_version_info:
-  genome_name:
-  genome_description:
-  genome_version:
+  species: "Homo_sapiens"          # 物种名，用于创建第一级目录
+  genome_name: "hg38_p14"          # 基因组ID
+  genome_description: "human genome hg38.p14"
   genome_assembly:
-    genome_fa:
+    genome_fa: "/path/to/source.fasta"
   genome_annotation:
-    genome_gtf:
-    genome_gff:
-    genome_gff:
+    genome_gtf: "/path/to/source.gtf"
+    genome_gff: "/path/to/source.gff"
+    genome_go: "/path/to/source.go"
+
 # building index parameter #
 reference_path : /data/jzhang/reference/WGSFlow_reference
-
+build_options:
+  threads: 16

@@ -270,7 +270,7 @@ rule bam_coverage:
     benchmark:
         "benchmarks/{sample}_Dup_bam_coverage_benchmark.txt",
     params:
-        prefix = "02.mapping/mosdepth_coverage/{sample}"
+        prefix = "02.mapping/mosdepth_coverage/{sample}.mosdepth"
     threads: 
         config['parameter']["threads"]["mosdepth"],
     shell:
@@ -423,8 +423,8 @@ rule mapping_report:
         qualimap_report_txt =  expand('02.mapping/qualimap_report/{sample}/genome_results.txt',sample=samples.keys()),
         samtools_flagstat = expand('02.mapping/samtools_flagstat/{sample}_dup_bam_flagstat.tsv',sample=samples.keys()),
         samtools_stats = expand('02.mapping/samtools_stats/{sample}_dup_bam_stats.tsv',sample=samples.keys()),
-        dist = expand("02.mapping/mosdepth_coverage/{sample}.sort.Dup.global.dist.txt",sample=samples.keys()),
-        summary = expand("02.mapping/mosdepth_coverage/{sample}.sort.Dup.mosdepth.summary.txt",sample=samples.keys()),
+        dist = expand("02.mapping/mosdepth_coverage/{sample}.mosdepth.global.dist.txt",sample=samples.keys()),
+        summary = expand("02.mapping/mosdepth_coverage/{sample}.mosdepth.summary.txt",sample=samples.keys()),
     output:
         report = "02.mapping/mapping_report/multiqc_mapping_report.html",
     resources:
