@@ -78,9 +78,9 @@ def mapping(samples: Dict = None, data_deliver: List = None, config: Dict = None
     data_deliver.extend(expand('02.mapping/cram/{sample}.Dup.cram.crai',sample=samples.keys()))
 
     # Mosdepth Coverage
-    data_deliver.extend(expand("02.mapping/mosdepth_coverage/{sample}.mosdepth.global.dist.txt",sample=samples.keys()))
-    data_deliver.extend(expand("02.mapping/mosdepth_coverage/{sample}.mosdepth.summary.txt",sample=samples.keys()))
-    data_deliver.extend(expand("02.mapping/mosdepth_coverage/{sample}.mosdepth.region.dist.txt",sample=samples.keys()))
+    data_deliver.extend(expand("02.mapping/mosdepth_coverage/{sample}.sort.Dup.mosdepth.global.dist.txt",sample=samples.keys()))
+    data_deliver.extend(expand("02.mapping/mosdepth_coverage/{sample}.sort.Dup.mosdepth.summary.txt",sample=samples.keys()))
+    data_deliver.extend(expand("02.mapping/mosdepth_coverage/{sample}.sort.Dup.mosdepth.region.dist.txt",sample=samples.keys()))
     
     # qualimap qc
     data_deliver.extend(expand('02.mapping/qualimap_report/{sample}/qualimapReport.html',sample=samples.keys()))
