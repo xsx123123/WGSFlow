@@ -44,7 +44,7 @@ rule VariantRecalibrator_SNP:
     resources:
         **rule_resource(config, 'high_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/gatk4.yaml"),
+        os.path.join(workflow.basedir, "envs", "gatk4.yaml"),
     log:
         "logs/06.vqsr/VariantRecalibrator_SNP.log",
     params:
@@ -93,7 +93,7 @@ rule ApplyVQSR_SNP:
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/gatk4.yaml"),
+        os.path.join(workflow.basedir, "envs", "gatk4.yaml"),
     log:
         "logs/06.vqsr/ApplyVQSR_SNP.log",
     params:
@@ -130,7 +130,7 @@ rule VariantRecalibrator_INDEL:
     resources:
         **rule_resource(config, 'high_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/gatk4.yaml"),
+        os.path.join(workflow.basedir, "envs", "gatk4.yaml"),
     log:
         "logs/06.vqsr/VariantRecalibrator_INDEL.log",
     params:
@@ -173,7 +173,7 @@ rule ApplyVQSR_INDEL:
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/gatk4.yaml"),
+        os.path.join(workflow.basedir, "envs", "gatk4.yaml"),
     log:
         "logs/06.vqsr/ApplyVQSR_INDEL.log",
     params:

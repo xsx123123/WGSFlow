@@ -27,7 +27,7 @@ from loguru import logger
 
 # get chrome list by get_chromosomes function
 CHROMOSOMES = get_chromosomes(config=config,
-                              reference_fasta=['bwa_mem', config['Genome_Version'], 'genome_fa'])
+                              reference_fasta_parameter = ['bwa_mem', config['Genome_Version'], 'genome_fa'])
 
 rule gatk_haplotypecaller:
     """
@@ -55,7 +55,7 @@ rule gatk_haplotypecaller:
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/gatk4.yaml"),
+        os.path.join(workflow.basedir, "envs", "gatk4.yaml"),
     log:
         "logs/03.gvcf/{sample}_haplotypecaller.log",
     benchmark:
@@ -122,7 +122,7 @@ rule gatk_genomicsdbimport:
     resources:
         **rule_resource(config, 'high_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/gatk4.yaml"),
+        os.path.join(workflow.basedir, "envs", "gatk4.yaml"),
     log:
         "logs/04.joint_calling/genomicsdbimport_{chr}.log",
     benchmark:
@@ -166,7 +166,7 @@ rule gatk_genotypegvcfs:
     resources:
         **rule_resource(config, 'high_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/gatk4.yaml"),
+        os.path.join(workflow.basedir, "envs", "gatk4.yaml"),
     log:
         "logs/05.vcf/genotypegvcfs_{chr}.log",
     benchmark:
@@ -202,7 +202,7 @@ rule concat_joint_vcf:
     resources:
         **rule_resource(config,'medium_resource',skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/bcftools.yaml"),
+        os.path.join(workflow.basedir, "envs", "bcftools.yaml"),
     log:
         "logs/05.vcf/concat_joint_vcf.log",
     threads:
@@ -220,10 +220,10 @@ vqsr_supported_genomes = config.get('join_calling_VQSR_filter', ['hg38.p14'])
 # loading VQSR or hard filtering rules
 if config['Genome_Version'] in vqsr_supported_genomes and len(samples) > 30:
     logger.info(f"🧬 Genome {config['Genome_Version']} supports VQSR and cohort size ({len(samples)}) is sufficient. Including VQSR rules.")
-    include "./gatk_VQSR_filtering.smk"
+    workflow.include(os.path.join(workflow.basedir, "rules", "sub_rules", "gatk_VQSR_filtering.smk"))
 else:
     logger.info(f"🌱 Genome lacks truth sets or cohort size ({len(samples)}) is too small. Fallback to Hard Filtering.")
-    include "./gatk_hard_filtering.smk"
+    workflow.include(os.path.join(workflow.basedir, "rules", "sub_rules", "gatk_hard_filtering.smk"))
 
 # ---------------------------- VQSR ---------------------------- #
 
@@ -249,7 +249,7 @@ rule gatk_joint_SnpEff_annotation:
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/snpEff.yaml"),
+        os.path.join(workflow.basedir, "envs", "snpEff.yaml"),
     message:
         "Running call variant annotation by snpEff",
     log:
@@ -285,7 +285,7 @@ rule gatk_joint_variant_stats:
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/bcftools.yaml"),
+        os.path.join(workflow.basedir, "envs", "bcftools.yaml"),
     message:
         "Running bcftools stats for {input.vcf} file ",
     log:
@@ -323,7 +323,7 @@ rule gatk_joint_variant_stats_multiqc:
     resources:
         **rule_resource(config,'low_resource',skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/multiqc.yaml"),
+        os.path.join(workflow.basedir, "envs", "multiqc.yaml"),
     message:
         "Running MultiQC to aggregate callvariant reports",
     benchmark:

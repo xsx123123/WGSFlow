@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import os
+from loguru import logger
+
 rule gatk_haplotypecaller_gvcf_single:
     """
     Generate per-sample GVCF files using GATK HaplotypeCaller.
@@ -15,7 +21,7 @@ rule gatk_haplotypecaller_gvcf_single:
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/gatk4.yaml"),
+        os.path.join(workflow.basedir, "envs", "gatk4.yaml"),
     log:
         "logs/03.call_variant/single_calling/{sample}_haplotypecaller_gvcf.log",
     benchmark:
@@ -52,7 +58,7 @@ rule gatk_genotypegvcfs_single:
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/gatk4.yaml"),
+        os.path.join(workflow.basedir, "envs", "gatk4.yaml"),
     log:
         "logs/03.call_variant/single_calling/{sample}_genotypegvcfs.log",
     benchmark:
@@ -97,7 +103,7 @@ rule gatk_single_hard_filtering:
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/gatk4.yaml"),
+        os.path.join(workflow.basedir, "envs", "gatk4.yaml"),
     log:
         "logs/03.call_variant/single_sample/{sample}_gatk_hard_filtering.log",
     benchmark:
@@ -143,7 +149,7 @@ rule gatk_SnpEff_annotation:
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/snpEff.yaml"),
+        os.path.join(workflow.basedir, "envs", "snpEff.yaml"),
     message:
         "Running call variant annotation by snpEff",
     log:
@@ -179,7 +185,7 @@ rule gatk_variant_stats:
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/bcftools.yaml"),
+        os.path.join(workflow.basedir, "envs", "bcftools.yaml"),
     message:
         "Running bcftools stats for {input.vcf} file ",
     log:
@@ -217,7 +223,7 @@ rule gatk_variant_stats_multiqc:
     resources:
         **rule_resource(config,'low_resource',skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/multiqc.yaml"),
+        os.path.join(workflow.basedir, "envs", "multiqc.yaml"),
     message:
         "Running MultiQC to aggregate callvariant reports",
     benchmark:

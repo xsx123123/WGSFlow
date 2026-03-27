@@ -49,7 +49,7 @@ rule gatk_joint_hard_filtering:
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/gatk4.yaml"),
+        os.path.join(workflow.basedir, "envs", "gatk4.yaml"),
     log:
         "logs/03.call_variant/join_calling/gatk_hard_filtering.log",
     params:

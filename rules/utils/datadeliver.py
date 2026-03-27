@@ -85,7 +85,7 @@ def mapping(samples: Dict = None, data_deliver: List = None, config: Dict = None
     data_deliver.extend(expand('02.mapping/samtools_stats/{sample}_dup_bam_stats.tsv',sample=samples.keys()))
 
     # mapping_report
-    data_deliver.append("02.mapping/mapping_report/mapping_report.html")
+    data_deliver.append("02.mapping/mapping_report/multiqc_mapping_report.html")
 
     return data_deliver
 

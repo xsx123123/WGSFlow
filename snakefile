@@ -68,7 +68,9 @@ include: 'rules/04.Contamination_check.smk'
 include: 'rules/05.short_read_clean.smk'
 include: 'rules/06.mapping.smk'
 include: 'rules/07.germline.smk'
-include: 'rules/07.somatic.smk'
+# Only load somatic rules if analysis_type is 'somatic'
+if config.get('analysis_type') == 'somatic':
+    include: 'rules/07.somatic.smk'
 include: 'rules/08.SV.smk'
 # --------- 5. Target Rule --------- #
 rule all:

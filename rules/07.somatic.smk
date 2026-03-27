@@ -43,8 +43,8 @@ rule mutect2_calling:
     """
     Perform somatic variant discovery using GATK Mutect2.
 
-    Operates in Tumor-Normal paired mode to identify candidate somatic 
-    mutations while accounting for site-specific noise and germline resource 
+    Operates in Tumor-Normal paired mode to identify candidate somatic
+    mutations while accounting for site-specific noise and germline resource
     evidence.
 
     Key Features:
@@ -71,23 +71,30 @@ rule mutect2_calling:
     params:
         normal_name = lambda wildcards: CONTRAST_MAP[wildcards.contrast]["normal_name"],
         java_opts = "-Xmx16G -XX:ParallelGCThreads=2",
-        pon = config['bwa_mem'][config['Genome_Version']]['pon'],
-        germline = config['bwa_mem'][config['Genome_Version']]['germline'],
-    threads: 
+        # Optional resources (only for human genomes like hg38)
+        pon = config['bwa_mem'][config['Genome_Version']].get('pon'),
+        germline = config['bwa_mem'][config['Genome_Version']].get('germline'),
+    threads:
         config['parameter']['threads'].get('mutect2', 8)
-    shell:
-        """
-        gatk --java-options "{params.java_opts}" Mutect2 \
-            -R {input.ref} \
-            -I {input.tumor_bam} \
-            -I {input.normal_bam} \
-            -normal {params.normal_name} \
-            --panel-of-normals {params.pon} \
-            --germline-resource {params.germline} \
-            --f1r2-tar-gz {output.f1r2} \
-            --native-pair-hmm-threads {threads} \
-            -O {output.vcf} &> {log}
-        """
+    run:
+        # Build command with optional parameters
+        cmd = [
+            "gatk", "--java-options", f'"{params.java_opts}"', "Mutect2",
+            "-R", input.ref,
+            "-I", input.tumor_bam,
+            "-I", input.normal_bam,
+            "-normal", params.normal_name,
+            "--f1r2-tar-gz", output.f1r2,
+            "--native-pair-hmm-threads", str(threads),
+            "-O", output.vcf
+        ]
+        # Add optional parameters if available
+        if params.pon:
+            cmd.extend(["--panel-of-normals", params.pon])
+        if params.germline:
+            cmd.extend(["--germline-resource", params.germline])
+
+        shell(" ".join(cmd) + " &> {log}")
 
 rule learn_read_orientation:
     """
@@ -123,11 +130,13 @@ rule get_pileup_summaries:
     """
     Summarize pileups of variants for contamination estimation.
 
-    Counts reads supporting ref and alt alleles at common variant sites 
+    Counts reads supporting ref and alt alleles at common variant sites
     to facilitate the calculation of cross-sample contamination.
     """
     input:
         bam = lambda wildcards: CONTRAST_MAP[wildcards.contrast]["tumor_bam"] if wildcards.type == "tumor" else CONTRAST_MAP[wildcards.contrast]["normal_bam"],
+        # Optional: common variants VCF (only for human genomes)
+        common_variants = config['bwa_mem'][config['Genome_Version']].get('common_variants_vcf'),
     output:
         pileup = "03.call_variant/somatic/{contrast}.{type}_pileup.table",
     resources:
@@ -142,18 +151,20 @@ rule get_pileup_summaries:
         "benchmarks/somatic/{contrast}_{type}_get_pileup_summaries_benchmark.txt",
     wildcard_constraints:
         type = "tumor|normal"
-    params:
-        common_variants = config['bwa_mem'][config['Genome_Version']]['common_variants_vcf'],
     threads:
         1
-    shell:
-        """
-        gatk GetPileupSummaries \
-            -I {input.bam} \
-            -V {params.common_variants} \
-            -L {params.common_variants} \
-            -O {output.pileup} &> {log}
-        """
+    run:
+        if not input.common_variants:
+            # If no common variants available, create an empty table
+            shell("touch {output.pileup} 2> {log}")
+        else:
+            shell("""
+                gatk GetPileupSummaries \
+                    -I {input.bam} \
+                    -V {input.common_variants} \
+                    -L {input.common_variants} \
+                    -O {output.pileup} &> {log}
+                """)
 
 rule calculate_contamination:
     """

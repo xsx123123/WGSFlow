@@ -26,7 +26,7 @@ from loguru import logger
 # ----- rule ----- #
 # get chrome list by get_chromosomes function
 CHROMOSOMES = get_chromosomes(config = config,
-                              reference_fasta = ['bwa_mem',config['Genome_Version'],'genome_fa'])
+                              reference_fasta_parameter = ['bwa_mem',config['Genome_Version'],'genome_fa'])
 
 rule call_variant_by_chromosome:
     """
@@ -52,7 +52,7 @@ rule call_variant_by_chromosome:
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/bcftools.yaml"),
+        os.path.join(workflow.basedir, "envs", "bcftools.yaml"),
     log:
         "logs/03.call_variant/{sample}_{chr}_variant.log",
     benchmark:
@@ -96,7 +96,7 @@ rule concat_sample_chromosomes:
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/bcftools.yaml"),
+        os.path.join(workflow.basedir, "envs", "bcftools.yaml"),
     log:
         "logs/03.call_variant/{sample}_concat_chr.log",
     benchmark:
@@ -129,7 +129,7 @@ rule sort_index_bcftools:
     resources:
         **rule_resource(config,'medium_resource',skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/bcftools.yaml"),
+        os.path.join(workflow.basedir, "envs", "bcftools.yaml"),
     log:
         "logs/03.call_variant/{sample}_variant_sort_index.log",
     message:
@@ -170,7 +170,7 @@ rule merg_vcf:
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/bcftools.yaml"),
+        os.path.join(workflow.basedir, "envs", "bcftools.yaml"),
     message:
         "Running bcftools merge & sort & index on vcf : {input.vcf_list}",
     log:
@@ -231,7 +231,7 @@ rule merg_vcf_filter:
     resources:
         **rule_resource(config, 'medium_resource', skip_queue_on_local=True, logger=logger),
     conda:
-        workflow.source_path("../envs/bcftools.yaml"),
+        os.path.join(workflow.basedir, "envs", "bcftools.yaml"),
     params:
         filter_expr = get_dynamic_bcftools_filter
     message:
@@ -278,7 +278,7 @@ rule bcf_SnpEff_annotation:
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/snpEff.yaml"),
+        os.path.join(workflow.basedir, "envs", "snpEff.yaml"),
     message:
         "Running call variant annotation by snpEff",
     log:
@@ -313,7 +313,7 @@ rule bcf_variant_stats:
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/bcftools.yaml"),
+        os.path.join(workflow.basedir, "envs", "bcftools.yaml"),
     message:
         "Running bcftools stats for {input.vcf} file ",
     log:
@@ -351,7 +351,7 @@ rule bcf_variant_stats_multiqc:
     resources:
         **rule_resource(config,'low_resource',skip_queue_on_local=True,logger = logger),
     conda:
-        workflow.source_path("../envs/multiqc.yaml"),
+        os.path.join(workflow.basedir, "envs", "multiqc.yaml"),
     message:
         "Running MultiQC to aggregate callvariant reports",
     benchmark:
