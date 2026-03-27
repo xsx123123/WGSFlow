@@ -1,8 +1,0 @@
-2026-03-26 20:32:34 | INFO     | snakemake_logger_plugin_rich_loguru.utils:setup_analysis_logging:73 | [bold green]Analysis Script Initialized[/bold green]
-2026-03-26 20:32:34 | INFO     | snakemake_logger_plugin_rich_loguru.utils:setup_analysis_logging:74 | Log file: logs/analysis_2026-03-26_20-32-34.log
-2026-03-26 20:32:34 | WARNING  | rules.utils.reference_update:resolve_reference_paths:43 | Lsat_Salinas_v11 未在 bwa_mem index 中定义，跳过。
-2026-03-26 20:32:34 | WARNING  | rules.utils.reference_update:resolve_reference_paths:43 | Lsat_Salinas_v11_wx 未在 bwa_mem index 中定义，跳过。
-2026-03-26 20:32:34 | WARNING  | rules.utils.reference_update:resolve_reference_paths:43 | Lsat_Salinas_v8 未在 bwa_mem index 中定义，跳过。
-2026-03-26 20:32:34 | WARNING  | rules.utils.reference_update:resolve_reference_paths:43 | hg38_p14 未在 bwa_mem index 中定义，跳过。
-2026-03-26 20:32:34 | WARNING  | rules.utils.reference_update:resolve_reference_paths:43 | GRCm39 未在 bwa_mem index 中定义，跳过。
-2026-03-26 20:32:34 | WARNING  | rules.utils.reference_update:resolve_reference_paths:43 | GO 未在 bwa_mem index 中定义，跳过。
