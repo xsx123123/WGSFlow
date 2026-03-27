@@ -256,8 +256,9 @@ rule bam_coverage:
         bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
         bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
     output:
-        dist = "02.mapping/mosdepth_coverage/{sample}.sort.Dup.global.dist.txt",
-        summary = "02.mapping/mosdepth_coverage/{sample}.sort.Dup.mosdepth.summary.txt",
+        dist = "02.mapping/mosdepth_coverage/{sample}.mosdepth.global.dist.txt",
+        summary = "02.mapping/mosdepth_coverage/{sample}.mosdepth.summary.txt",
+        region = "02.mapping/mosdepth_coverage/{sample}.mosdepth.region.dist.txt",
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
