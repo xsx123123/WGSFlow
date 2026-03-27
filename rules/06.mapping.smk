@@ -98,9 +98,8 @@ rule bwa_mapping:
         config['parameter']["threads"]["bwa_mem"],
     shell:
         """
-        ( bwa-mem mem -t {threads} -R '@RG\tID:{wildcards.sample}\tSM:{wildcards.sample}\tPL:{params.pl}\tLB:{wildcards.sample}' \
-                      {params.index} \
-                      {input.r1_trimmed} {input.r2_trimmed}  | samtools view -@ {threads} -bh  -o {output.bam} - ) 2>{log}
+        ( bwa mem -t {threads} -R '@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}\\tPL:{params.pl}\\tLB:{wildcards.sample}' \
+        {params.index}  {input.r1_trimmed} {input.r2_trimmed}  | samtools view -@ {threads} -bh  -o {output.bam} - ) 2>{log}
         """
 
 rule sort_index:
