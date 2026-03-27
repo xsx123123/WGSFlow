@@ -29,6 +29,13 @@ def qc_clean(samples: Dict = None, data_deliver: List = None) -> List:
     data_deliver.extend(expand("01.qc/fastq_screen_r2/{sample}_R2_screen.txt", sample=samples.keys()))
     data_deliver.append("01.qc/fastq_screen_multiqc_r1/multiqc_r1_fastq_screen_report.html")
     data_deliver.append("01.qc/fastq_screen_multiqc_r2/multiqc_r2_fastq_screen_report.html")
+
+    # fastq
+    data_deliver.extend(expand("01.qc/short_read_trim/{sample}.R1.trimed.fq.gz", sample=samples.keys()))
+    data_deliver.extend(expand("01.qc/short_read_trim/{sample}.R2.trimed.fq.gz", sample=samples.keys()))
+    data_deliver.extend(expand("01.qc/short_read_trim/{sample}.trimed.html", sample=samples.keys()))
+    data_deliver.extend(expand("01.qc/short_read_trim/{sample}.trimed.json", sample=samples.keys()))
+    
     # fastqc & multiqc
     data_deliver.append("01.qc/short_read_r1_multiqc/multiqc_r1_raw-data_report.html")
     data_deliver.append("01.qc/short_read_r2_multiqc/multiqc_r2_raw-data_report.html")

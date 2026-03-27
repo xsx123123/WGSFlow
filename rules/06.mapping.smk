@@ -117,8 +117,8 @@ rule sort_index:
     input:
         bam = '02.mapping/bwa_mem/{sample}/{sample}.raw.bam',
     output:
-        sort_bam =  temp('02.mapping/bwa_mem/sort_index/{sample}.sort.bam'),
-        sort_bam_bai = temp('02.mapping/bwa_mem/sort_index/{sample}.sort.bam.bai'),
+        sort_bam =  '02.mapping/bwa_mem/sort_index/{sample}.sort.bam',
+        sort_bam_bai = '02.mapping/bwa_mem/sort_index/{sample}.sort.bam.bai',
     resources:
         **rule_resource(config, 'medium_resource',  skip_queue_on_local=True,logger = logger),
     conda:
