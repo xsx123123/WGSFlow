@@ -47,6 +47,7 @@ rule call_variant_by_chromosome:
     input:
         bam = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam',
         bam_bai = '02.mapping/bwa_mem/MarkDup/{sample}.sort.Dup.bam.bai',
+        index = config['bwa_mem'][config['Genome_Version']]['genome_fa_fai'],
     output:
         vcf = temp('03.call_variant/by_chr/{sample}.{chr}.raw.vcf.gz'),
     resources:
