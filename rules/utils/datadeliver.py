@@ -95,6 +95,9 @@ def mapping(samples: Dict = None, data_deliver: List = None, config: Dict = None
     # mapping_report
     data_deliver.append("02.mapping/mapping_report/multiqc_mapping_report.html")
 
+    # add genome fa fai
+    data_deliver.append(config['bwa_mem'][config['Genome_Version']]['genome_fa_fai'])
+
     return data_deliver
 
 def bcftools_call_variant(samples: Dict = None, data_deliver: List = None) -> List:

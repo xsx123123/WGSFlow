@@ -35,6 +35,7 @@ parameter:
     bcftools: 10
     gatk_vqsr: 8
     snpEff: 10
+    samtools_faidx: 4
     gatk_hc: 8
     gatk_genomicsdb: 8
     gatk_genotype: 8
