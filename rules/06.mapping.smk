@@ -452,4 +452,38 @@ rule mapping_report:
                 -i {params.title} \
                 -n {params.report} &> {log}
         """
+
+rule fasta_index:
+    """
+    Generate FASTA index (.fai) for the reference genome.
+
+    This rule creates an index file for the reference genome FASTA file,
+    which is required for fast random access to specific genomic regions.
+    The index contains sequence names, lengths, and byte offsets.
+
+    Key Features:
+    - Enables efficient retrieval of specific chromosomes/positions
+    - Required by many downstream tools (samtools, GATK, etc.)
+    - Generated using samtools faidx command
+    """
+    input:
+        genome_fa = config['bwa_mem'][config['Genome_Version']]['genome_fa'],
+    output:
+        genome_fa_fai = config['bwa_mem'][config['Genome_Version']]['genome_fa_fai'],
+    resources:
+        **rule_resource(config, 'low_resource',skip_queue_on_local=True,logger = logger),
+    conda:
+        workflow.source_path("../envs/samtools.yaml"),
+    log:
+        "logs/02.mapping/fasta_index.log",
+    message:
+        "Running samtools faidx for reference genome indexing",
+    benchmark:
+        "benchmarks/fasta_index_benchmark.txt",
+    threads:
+        config['parameter']['threads']['samtools_faidx'],
+    shell:
+        """
+        samtools faidx {input.genome_fa} 2>{log}
+        """
 # ----- END ----- #
