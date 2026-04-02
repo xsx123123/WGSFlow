@@ -38,7 +38,7 @@ bwa_mem:
     Lsat_Salinas_v11:
       index: Lsat_Salinas_v11/bwa-mem_v11/Lsat_Salinas_v11
       genome_fa: Lsat_Salinas_v11/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.fna
-      genome_fa_fai: Lsat_Salinas_v11/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.fna.fai
+      genome_fa_fai: Lsat_Salinas_v11/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.fna.dict
       genome_gtf: Lsat_Salinas_v11/GCF_002870075.4_Lsat_Salinas_v11_genomic.nuclear_only.gtf
       genome_gff: Lsat_Salinas_v11/GCF_002870075.4_Lsat_Salinas_v11_genomic.fix_id.gff
       bed12: Lsat_Salinas_v11/Lsat_Salinas_v11.bed12
@@ -47,7 +47,7 @@ bwa_mem:
     Lsat_Salinas_v11_wx:
       index: Lsat_Salinas_v11_wx/Lsat_Salinas_v11_wx/Lsat_Salinas_v11_bwa
       genome_fa: Lsat_Salinas_v11_wx/Lsat_Salinas_v11.genome.fasta
-      genome_fa_fai: Lsat_Salinas_v11_wx/Lsat_Salinas_v11.genome.fasta.fai
+      genome_fa_fai: Lsat_Salinas_v11_wx/Lsat_Salinas_v11.genome.fasta.dict
       genome_gtf: Lsat_Salinas_v11_wx/Lsat_Salinas_v11.genome.gtf
       genome_gff: Lsat_Salinas_v11_wx/Lsat_Salinas_v11.genome.gff
       bed12: Lsat_Salinas_v11_wx/Lsat_Salinas_v11.genome.bed12
@@ -56,7 +56,7 @@ bwa_mem:
     hg38_p14:
       index: Homo_sapiens_assembly38/bwa_hg38_p14/bwa_hg38_p14_index
       genome_fa: Homo_sapiens_assembly38/Homo_sapiens_assembly38.fasta
-      genome_fa_fai: Homo_sapiens_assembly38/Homo_sapiens_assembly38.fasta.fai
+      genome_fa_fai: Homo_sapiens_assembly38/Homo_sapiens_assembly38.fasta.dict
       genome_gtf: Homo_sapiens_assembly38/gencode.v49.annotation.gtf
       genome_gff: Homo_sapiens_assembly38/gencode.v49.annotation.gff3
       bed12: Homo_sapiens_assembly38/hg38_p14.bed12

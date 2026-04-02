@@ -484,6 +484,6 @@ rule fasta_index:
         config['parameter']['threads']['samtools_faidx'],
     shell:
         """
-        samtools faidx {input.genome_fa} 2>{log}
+        samtools dict {input.genome_fa} 2>{log}
         """
 # ----- END ----- #
