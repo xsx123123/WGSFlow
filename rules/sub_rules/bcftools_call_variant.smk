@@ -235,7 +235,7 @@ rule merg_vcf_filter:
     params:
         filter_expr = get_dynamic_bcftools_filter
     message:
-        "Running dynamic bcftools filter for {num_samples} samples: {params.filter_expr}"
+        "Running dynamic bcftools filter for samples: {params.filter_expr}"
     log:
         "logs/03.call_variant/merge_variant_filter.log",
     benchmark:
